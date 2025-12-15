@@ -59,6 +59,8 @@ export interface JobTableProps {
   onReject: (id: string) => void | Promise<void>;
   onProcess: (id: string) => void | Promise<void>;
   processingJobId: string | null;
+  highlightedJobId?: string | null;
+  onHighlightChange?: (jobId: string | null) => void;
 }
 
 const sourceLabel: Record<Job["source"], string> = {
@@ -135,6 +137,8 @@ export const JobTable: React.FC<JobTableProps> = ({
   onReject,
   onProcess,
   processingJobId,
+  highlightedJobId,
+  onHighlightChange,
 }) => {
   const selectedCount = jobs.reduce((count, job) => count + (selectedJobIds.has(job.id) ? 1 : 0), 0);
   const allSelected = jobs.length > 0 && selectedCount === jobs.length;
@@ -215,6 +219,7 @@ export const JobTable: React.FC<JobTableProps> = ({
           const canReject = ["discovered", "ready"].includes(job.status);
           const isProcessing = processingJobId === job.id;
           const isSelected = selectedJobIds.has(job.id);
+          const isHighlighted = highlightedJobId === job.id;
 
           return (
             <TableRow key={job.id} data-state={isSelected ? "selected" : undefined}>
@@ -289,6 +294,14 @@ export const JobTable: React.FC<JobTableProps> = ({
                       <Copy className="mr-2 h-4 w-4" />
                       Copy info
                     </DropdownMenuItem>
+
+                    {onHighlightChange && (
+                      <DropdownMenuItem
+                        onSelect={() => onHighlightChange(isHighlighted ? null : job.id)}
+                      >
+                        {isHighlighted ? "Unhighlight" : "Highlight"}
+                      </DropdownMenuItem>
+                    )}
 
                     {hasPdf && (
                       <>

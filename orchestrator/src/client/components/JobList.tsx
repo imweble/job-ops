@@ -3,11 +3,13 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, LayoutGrid, Search, Table2 } from "lucide-react";
+import { ArrowUpDown, LayoutGrid, Search, Table2, X } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -170,6 +172,8 @@ const jobMatchesQuery = (job: Job, query: string) => {
   return haystack.includes(normalized);
 };
 
+const stripHtml = (value: string) => value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+
 export const JobList: React.FC<JobListProps> = ({
   jobs,
   onApply,
@@ -182,6 +186,8 @@ export const JobList: React.FC<JobListProps> = ({
   const [sort, setSort] = useState<JobSort>(DEFAULT_SORT);
   const [selectedJobIds, setSelectedJobIds] = useState<Set<string>>(() => new Set());
   const [batchAction, setBatchAction] = useState<null | "process" | "reject" | "apply">(null);
+  const [highlightedJobId, setHighlightedJobId] = useState<string | null>(null);
+  const [isHighlightVisible, setIsHighlightVisible] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try {
       const raw = localStorage.getItem(JOB_LIST_VIEW_STORAGE_KEY);
@@ -203,6 +209,27 @@ export const JobList: React.FC<JobListProps> = ({
   useEffect(() => {
     setSelectedJobIds(new Set());
   }, [activeTab, viewMode]);
+
+  useEffect(() => {
+    if (!highlightedJobId) return;
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    setIsHighlightVisible(false);
+    const raf = requestAnimationFrame(() => setIsHighlightVisible(true));
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setHighlightedJobId(null);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+      setIsHighlightVisible(false);
+    };
+  }, [highlightedJobId]);
 
   const counts = useMemo(() => {
     const byTab: Record<FilterTab, number> = {
@@ -250,6 +277,17 @@ export const JobList: React.FC<JobListProps> = ({
   }, [jobsForTab, searchQuery, sort]);
 
   const activeTabJobs = visibleJobsForTab.get(activeTab) ?? [];
+  const highlightedJob = useMemo(
+    () => (highlightedJobId ? jobs.find((job) => job.id === highlightedJobId) ?? null : null),
+    [highlightedJobId, jobs],
+  );
+
+  const highlightedJobDescription = useMemo(() => {
+    if (!highlightedJob) return "No description available.";
+    const jd = highlightedJob.jobDescription || "No description available.";
+    if (jd.includes("<") && jd.includes(">")) return stripHtml(jd);
+    return jd;
+  }, [highlightedJob]);
 
   useEffect(() => {
     setSelectedJobIds((current) => {
@@ -307,11 +345,75 @@ export const JobList: React.FC<JobListProps> = ({
   };
 
   return (
-    <Tabs
-      value={activeTab}
-      onValueChange={(value) => setActiveTab(value as FilterTab)}
-      className="space-y-4"
-    >
+    <>
+      {highlightedJob && (
+        <>
+          <div
+            className={cn(
+              "fixed inset-0 z-40 bg-background/30 backdrop-blur-md backdrop-saturate-150 transition-opacity duration-200 ease-out",
+              isHighlightVisible ? "opacity-100" : "opacity-0",
+            )}
+            onClick={() => setHighlightedJobId(null)}
+          />
+          <div
+            className="fixed inset-0 z-50 overflow-y-auto p-4 sm:p-8"
+            onClick={() => setHighlightedJobId(null)}
+          >
+            <div
+              className={cn(
+                "mx-auto w-full max-w-4xl space-y-4 transition-all duration-200 ease-out",
+                isHighlightVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2",
+              )}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-medium text-muted-foreground">Highlighted job</div>
+                  <div className="truncate text-base font-semibold">{highlightedJob.title}</div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setHighlightedJobId(null)}
+                  aria-label="Close highlight"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+
+              <JobCard
+                job={highlightedJob}
+                onApply={onApply}
+                onReject={onReject}
+                onProcess={onProcess}
+                isProcessing={processingJobId === highlightedJob.id}
+                highlightedJobId={highlightedJobId}
+                onHighlightChange={setHighlightedJobId}
+              />
+
+              <Card>
+                <CardHeader className="space-y-1">
+                  <CardTitle className="text-base">Job description</CardTitle>
+                  <div className="text-xs text-muted-foreground">Press Esc or click outside to exit highlight.</div>
+                </CardHeader>
+                <CardContent className="max-h-[60vh] overflow-auto text-sm text-muted-foreground">
+                  <div className="whitespace-pre-wrap leading-relaxed">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {highlightedJobDescription}
+                    </ReactMarkdown>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </>
+      )}
+
+      <Tabs
+        value={activeTab}
+        onValueChange={(value) => setActiveTab(value as FilterTab)}
+        className="space-y-4"
+      >
       <div className="space-y-3">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <TabsList className="w-full sm:w-auto h-9">
@@ -500,6 +602,8 @@ export const JobList: React.FC<JobListProps> = ({
                           onReject={onReject}
                           onProcess={onProcess}
                           processingJobId={processingJobId}
+                          highlightedJobId={highlightedJobId}
+                          onHighlightChange={setHighlightedJobId}
                         />
                       </CardContent>
                     </Card>
@@ -514,6 +618,8 @@ export const JobList: React.FC<JobListProps> = ({
                         onReject={onReject}
                         onProcess={onProcess}
                         isProcessing={processingJobId === job.id}
+                        highlightedJobId={highlightedJobId}
+                        onHighlightChange={setHighlightedJobId}
                       />
                     ))}
                   </div>
@@ -523,6 +629,7 @@ export const JobList: React.FC<JobListProps> = ({
           </TabsContent>
         );
       })}
-    </Tabs>
+      </Tabs>
+    </>
   );
 };

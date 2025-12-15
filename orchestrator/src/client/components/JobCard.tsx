@@ -32,6 +32,8 @@ interface JobCardProps {
   onReject: (id: string) => void | Promise<void>;
   onProcess: (id: string) => void | Promise<void>;
   isProcessing: boolean;
+  highlightedJobId?: string | null;
+  onHighlightChange?: (jobId: string | null) => void;
 }
 
 const formatDate = (dateStr: string | null) => {
@@ -55,6 +57,8 @@ export const JobCard: React.FC<JobCardProps> = ({
   onReject,
   onProcess,
   isProcessing,
+  highlightedJobId,
+  onHighlightChange,
 }) => {
   const sourceLabel: Record<Job["source"], string> = {
     gradcracker: "Gradcracker",
@@ -70,6 +74,7 @@ export const JobCard: React.FC<JobCardProps> = ({
   const jobLink = job.applicationLink || job.jobUrl;
   const pdfHref = `/pdfs/resume_${job.id}.pdf`;
   const deadline = formatDate(job.deadline);
+  const isHighlighted = highlightedJobId === job.id;
 
   const handleCopyInfo = async () => {
     try {
@@ -148,6 +153,16 @@ export const JobCard: React.FC<JobCardProps> = ({
           <Copy className="mr-2 h-4 w-4" />
           Copy info
         </Button>
+
+        {onHighlightChange && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onHighlightChange(isHighlighted ? null : job.id)}
+          >
+            {isHighlighted ? "Unhighlight" : "Highlight"}
+          </Button>
+        )}
 
         {hasPdf && (
           <Button asChild variant="outline" size="sm">
