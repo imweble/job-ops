@@ -30,6 +30,83 @@ export interface UkVisaJobsResult {
 }
 
 /**
+ * Basic HTML to text conversion to extract job description.
+ */
+function cleanHtml(html: string): string {
+    // Remove script, style tags and their content
+    let text = html.replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, '');
+    
+    // Try to extract content between <main> tags if present, or fallback to body
+    const mainMatch = html.match(/<main[^>]*>([\s\S]*?)<\/main>/i);
+    const bodyMatch = html.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+    if (mainMatch) {
+        text = mainMatch[1];
+    } else if (bodyMatch) {
+        text = bodyMatch[1];
+    }
+
+    // Remove remaining HTML tags
+    text = text.replace(/<[^>]+>/g, ' ');
+    
+    // Unescape common entities
+    text = text.replace(/&nbsp;/g, ' ')
+               .replace(/&amp;/g, '&')
+               .replace(/&lt;/g, '<')
+               .replace(/&gt;/g, '>')
+               .replace(/&quot;/g, '"');
+    
+    // Normalize whitespace
+    text = text.replace(/\s+/g, ' ').trim();
+    
+    // Limit length to avoid blowing up AI context
+    if (text.length > 8000) {
+        text = text.substring(0, 8000) + '...';
+    }
+    
+    return text;
+}
+
+/**
+ * Fetch job description from the job URL.
+ */
+async function fetchJobDescription(url: string): Promise<string | null> {
+    try {
+        console.log(`      Fetching description from ${url}...`);
+        
+        // Build cookies if present in env (similar to extractor)
+        const cookieParts: string[] = [];
+        if (process.env.UKVISAJOBS_CSRF_TOKEN) cookieParts.push(`csrf_token=${process.env.UKVISAJOBS_CSRF_TOKEN}`);
+        if (process.env.UKVISAJOBS_CI_SESSION) cookieParts.push(`ci_session=${process.env.UKVISAJOBS_CI_SESSION}`);
+        const token = process.env.UKVISAJOBS_AUTH_TOKEN || process.env.UKVISAJOBS_TOKEN;
+        if (token) cookieParts.push(`authToken=${token}`);
+        
+        const headers: Record<string, string> = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        };
+        
+        if (cookieParts.length > 0) {
+            headers['Cookie'] = cookieParts.join('; ');
+        }
+
+        const response = await fetch(url, {
+            headers,
+            signal: AbortSignal.timeout(10000) // 10s timeout
+        });
+        
+        if (!response.ok) return null;
+        
+        const html = await response.text();
+        const cleaned = cleanHtml(html);
+        
+        // If we only got a tiny bit of text, it might have failed
+        return cleaned.length > 100 ? cleaned : null;
+    } catch (error) {
+        console.warn(`      ⚠️ Failed to fetch description: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        return null;
+    }
+}
+
+/**
  * Clear previous extraction results.
  */
 async function clearStorageDataset(): Promise<void> {
@@ -95,6 +172,21 @@ export async function runUkVisaJobs(options: RunUkVisaJobsOptions = {}): Promise
                 const id = job.sourceJobId || job.jobUrl;
                 if (!seenIds.has(id)) {
                     seenIds.add(id);
+
+                    // Enrich description if missing or poor
+                    const isPoorDescription = !job.jobDescription || 
+                                            job.jobDescription.length < 100 || 
+                                            job.jobDescription.startsWith('Visa sponsorship info:');
+                    
+                    if (isPoorDescription && job.jobUrl) {
+                        const enriched = await fetchJobDescription(job.jobUrl);
+                        if (enriched) {
+                            job.jobDescription = enriched;
+                        }
+                        // Small delay to avoid hammering the server
+                        await new Promise((resolve) => setTimeout(resolve, 500));
+                    }
+
                     allJobs.push(job);
                     newCount++;
                 }
