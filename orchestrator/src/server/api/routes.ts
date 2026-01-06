@@ -103,6 +103,7 @@ apiRouter.get('/jobs/:id', async (req: Request, res: Response) => {
  */
 const updateJobSchema = z.object({
   status: z.enum(['discovered', 'processing', 'ready', 'applied', 'rejected', 'expired']).optional(),
+  jobDescription: z.string().optional(),
   suitabilityScore: z.number().min(0).max(100).optional(),
   suitabilityReason: z.string().optional(),
   tailoredSummary: z.string().optional(),

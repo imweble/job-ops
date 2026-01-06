@@ -129,6 +129,7 @@ export interface CreateJobInput {
 
 export interface UpdateJobInput {
   status?: JobStatus;
+  jobDescription?: string;
   suitabilityScore?: number;
   suitabilityReason?: string;
   tailoredSummary?: string;

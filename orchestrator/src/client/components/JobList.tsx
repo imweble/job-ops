@@ -3,13 +3,14 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import { ArrowUpDown, Filter, LayoutGrid, Search, Sparkles, Table2, X } from "lucide-react";
+import { ArrowUpDown, Edit2, Filter, LayoutGrid, Save, Search, Sparkles, Table2, Undo, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,6 +30,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { cn } from "@/lib/utils";
+import * as api from "../api";
 import type { Job, JobStatus, JobSource } from "../../shared/types";
 import { JobCard } from "./JobCard";
 import { JobTable, type JobSort } from "./JobTable";
@@ -205,6 +207,9 @@ export const JobList: React.FC<JobListProps> = ({
   const [batchAction, setBatchAction] = useState<null | "process" | "reject" | "apply">(null);
   const [highlightedJobId, setHighlightedJobId] = useState<string | null>(null);
   const [isHighlightVisible, setIsHighlightVisible] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [editedDescription, setEditedDescription] = useState("");
+  const [isSavingDescription, setIsSavingDescription] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>(() => {
     try {
       const raw = localStorage.getItem(JOB_LIST_VIEW_STORAGE_KEY);
@@ -313,6 +318,31 @@ export const JobList: React.FC<JobListProps> = ({
     if (jd.includes("<") && jd.includes(">")) return stripHtml(jd);
     return jd;
   }, [highlightedJob]);
+
+  useEffect(() => {
+    if (!highlightedJobId) {
+      setIsEditingDescription(false);
+      setEditedDescription("");
+    } else if (highlightedJob && !isEditingDescription) {
+      setEditedDescription(highlightedJob.jobDescription || "");
+    }
+  }, [highlightedJobId, highlightedJob, isEditingDescription]);
+
+  const handleSaveDescription = async () => {
+    if (!highlightedJobId) return;
+    try {
+      setIsSavingDescription(true);
+      await api.updateJob(highlightedJobId, { jobDescription: editedDescription });
+      toast.success("Job description updated");
+      setIsEditingDescription(false);
+      await onUpdate();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update description";
+      toast.error(message);
+    } finally {
+      setIsSavingDescription(false);
+    }
+  };
 
   useEffect(() => {
     setSelectedJobIds((current) => {
@@ -432,16 +462,65 @@ export const JobList: React.FC<JobListProps> = ({
               </Accordion>
 
               <Card>
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-base">Job description</CardTitle>
-                  <div className="text-xs text-muted-foreground">Press Esc or click outside to exit highlight.</div>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <div className="space-y-1">
+                    <CardTitle className="text-base">Job description</CardTitle>
+                    {!isEditingDescription && (
+                      <div className="text-xs text-muted-foreground">Press Esc or click outside to exit highlight.</div>
+                    )}
+                  </div>
+                  {!isEditingDescription ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsEditingDescription(true)}
+                      className="h-8 gap-1.5"
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                      Edit
+                    </Button>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setIsEditingDescription(false);
+                          setEditedDescription(highlightedJob?.jobDescription || "");
+                        }}
+                        className="h-8 gap-1.5"
+                        disabled={isSavingDescription}
+                      >
+                        <Undo className="h-3.5 w-3.5" />
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSaveDescription}
+                        className="h-8 gap-1.5"
+                        disabled={isSavingDescription}
+                      >
+                        <Save className="h-3.5 w-3.5" />
+                        {isSavingDescription ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  )}
                 </CardHeader>
                 <CardContent className="max-h-[60vh] overflow-auto text-sm text-muted-foreground">
-                  <div className="whitespace-pre-wrap leading-relaxed">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {highlightedJobDescription}
-                    </ReactMarkdown>
-                  </div>
+                  {isEditingDescription ? (
+                    <Textarea
+                      value={editedDescription}
+                      onChange={(e) => setEditedDescription(e.target.value)}
+                      className="min-h-[40vh] font-mono leading-relaxed"
+                      placeholder="Enter job description..."
+                    />
+                  ) : (
+                    <div className="whitespace-pre-wrap leading-relaxed">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {highlightedJobDescription}
+                      </ReactMarkdown>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
