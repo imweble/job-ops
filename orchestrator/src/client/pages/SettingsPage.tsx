@@ -57,6 +57,9 @@ function clampInt(value: number, min: number, max: number) {
 export const SettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<AppSettings | null>(null)
   const [modelDraft, setModelDraft] = useState("")
+  const [modelScorerDraft, setModelScorerDraft] = useState("")
+  const [modelTailoringDraft, setModelTailoringDraft] = useState("")
+  const [modelProjectSelectionDraft, setModelProjectSelectionDraft] = useState("")
   const [pipelineWebhookUrlDraft, setPipelineWebhookUrlDraft] = useState("")
   const [jobCompleteWebhookUrlDraft, setJobCompleteWebhookUrlDraft] = useState("")
   const [resumeProjectsDraft, setResumeProjectsDraft] = useState<ResumeProjectsSettings | null>(null)
@@ -79,6 +82,9 @@ export const SettingsPage: React.FC = () => {
         if (!isMounted) return
         setSettings(data)
         setModelDraft(data.overrideModel ?? "")
+        setModelScorerDraft(data.overrideModelScorer ?? "")
+        setModelTailoringDraft(data.overrideModelTailoring ?? "")
+        setModelProjectSelectionDraft(data.overrideModelProjectSelection ?? "")
         setPipelineWebhookUrlDraft(data.overridePipelineWebhookUrl ?? "")
         setJobCompleteWebhookUrlDraft(data.overrideJobCompleteWebhookUrl ?? "")
         setResumeProjectsDraft(data.resumeProjects)
@@ -107,6 +113,12 @@ export const SettingsPage: React.FC = () => {
   const effectiveModel = settings?.model ?? ""
   const defaultModel = settings?.defaultModel ?? ""
   const overrideModel = settings?.overrideModel
+  const effectiveModelScorer = settings?.modelScorer ?? ""
+  const overrideModelScorer = settings?.overrideModelScorer
+  const effectiveModelTailoring = settings?.modelTailoring ?? ""
+  const overrideModelTailoring = settings?.overrideModelTailoring
+  const effectiveModelProjectSelection = settings?.modelProjectSelection ?? ""
+  const overrideModelProjectSelection = settings?.overrideModelProjectSelection
   const effectivePipelineWebhookUrl = settings?.pipelineWebhookUrl ?? ""
   const defaultPipelineWebhookUrl = settings?.defaultPipelineWebhookUrl ?? ""
   const overridePipelineWebhookUrl = settings?.overridePipelineWebhookUrl
@@ -142,6 +154,12 @@ export const SettingsPage: React.FC = () => {
     if (!settings || !resumeProjectsDraft) return false
     const next = modelDraft.trim()
     const current = (overrideModel ?? "").trim()
+    const nextScorer = modelScorerDraft.trim()
+    const currentScorer = (overrideModelScorer ?? "").trim()
+    const nextTailoring = modelTailoringDraft.trim()
+    const currentTailoring = (overrideModelTailoring ?? "").trim()
+    const nextProjectSelection = modelProjectSelectionDraft.trim()
+    const currentProjectSelection = (overrideModelProjectSelection ?? "").trim()
     const nextWebhook = pipelineWebhookUrlDraft.trim()
     const currentWebhook = (overridePipelineWebhookUrl ?? "").trim()
     const nextJobCompleteWebhook = jobCompleteWebhookUrlDraft.trim()
@@ -150,6 +168,9 @@ export const SettingsPage: React.FC = () => {
     const searchTermsChanged = JSON.stringify(searchTermsDraft) !== JSON.stringify(overrideSearchTerms ?? null)
     return (
       next !== current ||
+      nextScorer !== currentScorer ||
+      nextTailoring !== currentTailoring ||
+      nextProjectSelection !== currentProjectSelection ||
       nextWebhook !== currentWebhook ||
       nextJobCompleteWebhook !== currentJobCompleteWebhook ||
       !resumeProjectsEqual(resumeProjectsDraft, settings.resumeProjects) ||
@@ -164,9 +185,15 @@ export const SettingsPage: React.FC = () => {
   }, [
     settings,
     modelDraft,
+    modelScorerDraft,
+    modelTailoringDraft,
+    modelProjectSelectionDraft,
     pipelineWebhookUrlDraft,
     jobCompleteWebhookUrlDraft,
     overrideModel,
+    overrideModelScorer,
+    overrideModelTailoring,
+    overrideModelProjectSelection,
     overridePipelineWebhookUrl,
     overrideJobCompleteWebhookUrl,
     resumeProjectsDraft,
@@ -191,6 +218,9 @@ export const SettingsPage: React.FC = () => {
     try {
       setIsSaving(true)
       const trimmed = modelDraft.trim()
+      const trimmedScorer = modelScorerDraft.trim()
+      const trimmedTailoring = modelTailoringDraft.trim()
+      const trimmedProjectSelection = modelProjectSelectionDraft.trim()
       const webhookTrimmed = pipelineWebhookUrlDraft.trim()
       const jobCompleteTrimmed = jobCompleteWebhookUrlDraft.trim()
       const resumeProjectsOverride = resumeProjectsEqual(resumeProjectsDraft, settings.defaultResumeProjects)
@@ -205,6 +235,9 @@ export const SettingsPage: React.FC = () => {
       const jobspyLinkedinFetchDescriptionOverride = jobspyLinkedinFetchDescriptionDraft === defaultJobspyLinkedinFetchDescription ? null : jobspyLinkedinFetchDescriptionDraft
       const updated = await api.updateSettings({
         model: trimmed.length > 0 ? trimmed : null,
+        modelScorer: trimmedScorer.length > 0 ? trimmedScorer : null,
+        modelTailoring: trimmedTailoring.length > 0 ? trimmedTailoring : null,
+        modelProjectSelection: trimmedProjectSelection.length > 0 ? trimmedProjectSelection : null,
         pipelineWebhookUrl: webhookTrimmed.length > 0 ? webhookTrimmed : null,
         jobCompleteWebhookUrl: jobCompleteTrimmed.length > 0 ? jobCompleteTrimmed : null,
         resumeProjects: resumeProjectsOverride,
@@ -218,6 +251,9 @@ export const SettingsPage: React.FC = () => {
       })
       setSettings(updated)
       setModelDraft(updated.overrideModel ?? "")
+      setModelScorerDraft(updated.overrideModelScorer ?? "")
+      setModelTailoringDraft(updated.overrideModelTailoring ?? "")
+      setModelProjectSelectionDraft(updated.overrideModelProjectSelection ?? "")
       setPipelineWebhookUrlDraft(updated.overridePipelineWebhookUrl ?? "")
       setJobCompleteWebhookUrlDraft(updated.overrideJobCompleteWebhookUrl ?? "")
       setResumeProjectsDraft(updated.resumeProjects)
@@ -266,6 +302,9 @@ export const SettingsPage: React.FC = () => {
       setIsSaving(true)
       const updated = await api.updateSettings({
         model: null,
+        modelScorer: null,
+        modelTailoring: null,
+        modelProjectSelection: null,
         pipelineWebhookUrl: null,
         jobCompleteWebhookUrl: null,
         resumeProjects: null,
@@ -279,6 +318,9 @@ export const SettingsPage: React.FC = () => {
       })
       setSettings(updated)
       setModelDraft("")
+      setModelScorerDraft("")
+      setModelTailoringDraft("")
+      setModelProjectSelectionDraft("")
       setPipelineWebhookUrlDraft("")
       setJobCompleteWebhookUrlDraft("")
       setResumeProjectsDraft(updated.resumeProjects)
@@ -327,9 +369,56 @@ export const SettingsPage: React.FC = () => {
 
               <Separator />
 
+              <div className="space-y-4">
+                <div className="text-sm font-medium">Task-Specific Overrides</div>
+                
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="space-y-2">
+                    <div className="text-sm">Scoring Model</div>
+                    <Input
+                      value={modelScorerDraft}
+                      onChange={(event) => setModelScorerDraft(event.target.value)}
+                      placeholder={effectiveModel || "inherit"}
+                      disabled={isLoading || isSaving}
+                    />
+                    <div className="text-xs text-muted-foreground">
+                      Effective: <span className="font-mono">{effectiveModelScorer || effectiveModel}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="text-sm">Tailoring Model</div>
+                    <Input
+                      value={modelTailoringDraft}
+                      onChange={(event) => setModelTailoringDraft(event.target.value)}
+                      placeholder={effectiveModel || "inherit"}
+                      disabled={isLoading || isSaving}
+                    />
+                    <div className="text-xs text-muted-foreground">
+                      Effective: <span className="font-mono">{effectiveModelTailoring || effectiveModel}</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="text-sm">Project Selection Model</div>
+                    <Input
+                      value={modelProjectSelectionDraft}
+                      onChange={(event) => setModelProjectSelectionDraft(event.target.value)}
+                      placeholder={effectiveModel || "inherit"}
+                      disabled={isLoading || isSaving}
+                    />
+                    <div className="text-xs text-muted-foreground">
+                      Effective: <span className="font-mono">{effectiveModelProjectSelection || effectiveModel}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
               <div className="grid gap-2 text-sm sm:grid-cols-2">
                 <div>
-                  <div className="text-xs text-muted-foreground">Effective</div>
+                  <div className="text-xs text-muted-foreground">Global Effective</div>
                   <div className="break-words font-mono text-xs">{effectiveModel || "—"}</div>
                 </div>
                 <div>

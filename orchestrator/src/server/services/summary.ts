@@ -2,6 +2,8 @@
  * Service for generating tailored resume content (Summary, Headline, Skills).
  */
 
+import { getSetting } from '../repositories/settings.js';
+
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export interface TailoredData {
@@ -30,7 +32,10 @@ export async function generateTailoring(
     return { success: false, error: 'API key not configured' };
   }
   
-  const model = process.env.MODEL || 'openai/gpt-4o-mini';
+  const overrideModel = await getSetting('model');
+  const overrideModelTailoring = await getSetting('modelTailoring');
+  // Precedence: Tailoring-specific override > Global override > Env var > Default
+  const model = overrideModelTailoring || overrideModel || process.env.MODEL || 'openai/gpt-4o-mini';
   const prompt = buildTailoringPrompt(profile, jobDescription);
   
   try {

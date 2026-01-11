@@ -143,6 +143,9 @@ export async function getProfileProjects(): Promise<ResumeProjectCatalogItem[]> 
 
 export async function updateSettings(update: {
   model?: string | null
+  modelScorer?: string | null
+  modelTailoring?: string | null
+  modelProjectSelection?: string | null
   pipelineWebhookUrl?: string | null
   jobCompleteWebhookUrl?: string | null
   resumeProjects?: ResumeProjectsSettings | null

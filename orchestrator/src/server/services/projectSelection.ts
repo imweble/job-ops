@@ -21,7 +21,9 @@ export async function pickProjectIdsForJob(args: {
   }
 
   const overrideModel = await getSetting('model');
-  const model = overrideModel || process.env.MODEL || 'openai/gpt-4o-mini';
+  const overrideModelProjectSelection = await getSetting('modelProjectSelection');
+  // Precedence: Project-specific override > Global override > Env var > Default
+  const model = overrideModelProjectSelection || overrideModel || process.env.MODEL || 'openai/gpt-4o-mini';
 
   const prompt = buildProjectSelectionPrompt({
     jobDescription: args.jobDescription,

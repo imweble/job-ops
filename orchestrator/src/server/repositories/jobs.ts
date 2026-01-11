@@ -241,6 +241,8 @@ function mapRowToJob(row: typeof jobs.$inferSelect): Job {
     suitabilityScore: row.suitabilityScore,
     suitabilityReason: row.suitabilityReason,
     tailoredSummary: row.tailoredSummary,
+    tailoredHeadline: row.tailoredHeadline ?? null,
+    tailoredSkills: row.tailoredSkills ?? null,
     selectedProjectIds: row.selectedProjectIds ?? null,
     pdfPath: row.pdfPath,
     notionPageId: row.notionPageId,

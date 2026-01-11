@@ -26,7 +26,9 @@ export async function scoreJobSuitability(
   }
 
   const overrideModel = await getSetting('model');
-  const model = overrideModel || process.env.MODEL || 'openai/gpt-4o-mini';
+  const overrideModelScorer = await getSetting('modelScorer');
+  // Precedence: Scorer-specific override > Global override > Env var > Default
+  const model = overrideModelScorer || overrideModel || process.env.MODEL || 'openai/gpt-4o-mini';
   
   const prompt = buildScoringPrompt(job, profile);
   

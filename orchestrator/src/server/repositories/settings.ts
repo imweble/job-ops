@@ -8,6 +8,9 @@ import { db, schema } from '../db/index.js'
 const { settings } = schema
 
 export type SettingKey = 'model'
+  | 'modelScorer'
+  | 'modelTailoring'
+  | 'modelProjectSelection'
   | 'pipelineWebhookUrl'
   | 'jobCompleteWebhookUrl'
   | 'resumeProjects'

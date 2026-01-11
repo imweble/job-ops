@@ -211,6 +211,14 @@ export interface AppSettings {
   model: string;
   defaultModel: string;
   overrideModel: string | null;
+  // Specific model overrides
+  modelScorer: string; // resolved
+  overrideModelScorer: string | null;
+  modelTailoring: string; // resolved
+  overrideModelTailoring: string | null;
+  modelProjectSelection: string; // resolved
+  overrideModelProjectSelection: string | null;
+  
   pipelineWebhookUrl: string;
   defaultPipelineWebhookUrl: string;
   overridePipelineWebhookUrl: string | null;

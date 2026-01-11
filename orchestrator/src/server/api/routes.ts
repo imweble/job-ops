@@ -270,6 +270,16 @@ apiRouter.get('/settings', async (_req: Request, res: Response) => {
     const defaultModel = process.env.MODEL || 'openai/gpt-4o-mini';
     const model = overrideModel || defaultModel;
 
+    // Specific AI models
+    const overrideModelScorer = await settingsRepo.getSetting('modelScorer');
+    const modelScorer = overrideModelScorer || model; 
+
+    const overrideModelTailoring = await settingsRepo.getSetting('modelTailoring');
+    const modelTailoring = overrideModelTailoring || model; 
+
+    const overrideModelProjectSelection = await settingsRepo.getSetting('modelProjectSelection');
+    const modelProjectSelection = overrideModelProjectSelection || model; 
+
     const overridePipelineWebhookUrl = await settingsRepo.getSetting('pipelineWebhookUrl');
     const defaultPipelineWebhookUrl = process.env.PIPELINE_WEBHOOK_URL || process.env.WEBHOOK_URL || '';
     const pipelineWebhookUrl = overridePipelineWebhookUrl || defaultPipelineWebhookUrl;
@@ -326,6 +336,12 @@ apiRouter.get('/settings', async (_req: Request, res: Response) => {
         model,
         defaultModel,
         overrideModel,
+        modelScorer,
+        overrideModelScorer,
+        modelTailoring,
+        overrideModelTailoring,
+        modelProjectSelection,
+        overrideModelProjectSelection,
         pipelineWebhookUrl,
         defaultPipelineWebhookUrl,
         overridePipelineWebhookUrl,
@@ -364,6 +380,9 @@ apiRouter.get('/settings', async (_req: Request, res: Response) => {
 
 const updateSettingsSchema = z.object({
   model: z.string().trim().min(1).max(200).nullable().optional(),
+  modelScorer: z.string().trim().min(1).max(200).nullable().optional(),
+  modelTailoring: z.string().trim().min(1).max(200).nullable().optional(),
+  modelProjectSelection: z.string().trim().min(1).max(200).nullable().optional(),
   pipelineWebhookUrl: z.string().trim().min(1).max(2000).nullable().optional(),
   jobCompleteWebhookUrl: z.string().trim().min(1).max(2000).nullable().optional(),
   resumeProjects: z.object({
@@ -390,6 +409,16 @@ apiRouter.patch('/settings', async (req: Request, res: Response) => {
     if ('model' in input) {
       const model = input.model ?? null;
       await settingsRepo.setSetting('model', model);
+    }
+
+    if ('modelScorer' in input) {
+      await settingsRepo.setSetting('modelScorer', input.modelScorer ?? null);
+    }
+    if ('modelTailoring' in input) {
+      await settingsRepo.setSetting('modelTailoring', input.modelTailoring ?? null);
+    }
+    if ('modelProjectSelection' in input) {
+      await settingsRepo.setSetting('modelProjectSelection', input.modelProjectSelection ?? null);
     }
 
     if ('pipelineWebhookUrl' in input) {
@@ -455,6 +484,15 @@ apiRouter.patch('/settings', async (req: Request, res: Response) => {
     const defaultModel = process.env.MODEL || 'openai/gpt-4o-mini';
     const model = overrideModel || defaultModel;
 
+    const overrideModelScorer = await settingsRepo.getSetting('modelScorer');
+    const modelScorer = overrideModelScorer || model; 
+
+    const overrideModelTailoring = await settingsRepo.getSetting('modelTailoring');
+    const modelTailoring = overrideModelTailoring || model; 
+
+    const overrideModelProjectSelection = await settingsRepo.getSetting('modelProjectSelection');
+    const modelProjectSelection = overrideModelProjectSelection || model;
+
     const overridePipelineWebhookUrl = await settingsRepo.getSetting('pipelineWebhookUrl');
     const defaultPipelineWebhookUrl = process.env.PIPELINE_WEBHOOK_URL || process.env.WEBHOOK_URL || '';
     const pipelineWebhookUrl = overridePipelineWebhookUrl || defaultPipelineWebhookUrl;
@@ -512,6 +550,12 @@ apiRouter.patch('/settings', async (req: Request, res: Response) => {
         model,
         defaultModel,
         overrideModel,
+        modelScorer,
+        overrideModelScorer,
+        modelTailoring,
+        overrideModelTailoring,
+        modelProjectSelection,
+        overrideModelProjectSelection,
         pipelineWebhookUrl,
         defaultPipelineWebhookUrl,
         overridePipelineWebhookUrl,
