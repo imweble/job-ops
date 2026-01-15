@@ -49,7 +49,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { copyTextToClipboard, formatJobForWebhook } from "@client/lib/jobCopy";
-import { PipelineProgress } from "../components";
+import { PipelineProgress, DiscoveredPanel } from "../components";
 import * as api from "../api";
 import { TailoringEditor } from "../components/TailoringEditor";
 import type { Job, JobSource, JobStatus } from "../../shared/types";
@@ -901,7 +901,19 @@ export const OrchestratorPage: React.FC = () => {
 
           {/* Inspector panel: visually subordinate to list */}
           <div className="rounded-lg border border-border/40 bg-muted/5 p-4 lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-8rem)] lg:overflow-y-auto">
-            {!selectedJob ? (
+            {/* Use DiscoveredPanel for Discovered tab - two-mode triage workflow */}
+            {activeTab === "discovered" ? (
+              <DiscoveredPanel
+                job={selectedJob}
+                onJobUpdated={loadJobs}
+                onJobMoved={(jobId) => {
+                  // Select next job in list after current one is moved
+                  const currentIndex = activeJobs.findIndex((j) => j.id === jobId);
+                  const nextJob = activeJobs[currentIndex + 1] || activeJobs[currentIndex - 1];
+                  setSelectedJobId(nextJob?.id ?? null);
+                }}
+              />
+            ) : !selectedJob ? (
               <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-1 text-center">
                 <div className="text-sm font-medium text-muted-foreground">No job selected</div>
                 <p className="text-xs text-muted-foreground/70">Select a job to view details</p>
