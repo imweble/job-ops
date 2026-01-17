@@ -37,7 +37,6 @@ function createBasicAuthGuard() {
   function isPublicReadOnlyRoute(method: string, path: string): boolean {
     const normalizedMethod = method.toUpperCase();
     const normalizedPath = path.split('?')[0] || path;
-    if (normalizedMethod === 'POST' && normalizedPath === '/api/ukvisajobs/search') return true;
     if (normalizedMethod === 'POST' && normalizedPath === '/api/visa-sponsors/search') return true;
     return false;
   }
