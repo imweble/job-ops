@@ -14,7 +14,8 @@ export type JobSource =
   | 'gradcracker'
   | 'indeed'
   | 'linkedin'
-  | 'ukvisajobs';
+  | 'ukvisajobs'
+  | 'manual';
 
 export interface Job {
   id: string;
@@ -129,6 +130,28 @@ export interface CreateJobInput {
   workFromHomeType?: string;
 }
 
+export interface ManualJobDraft {
+  title?: string;
+  employer?: string;
+  jobUrl?: string;
+  applicationLink?: string;
+  location?: string;
+  salary?: string;
+  deadline?: string;
+  jobDescription?: string;
+  jobType?: string;
+  jobLevel?: string;
+  jobFunction?: string;
+  disciplines?: string;
+  degreeRequired?: string;
+  starting?: string;
+}
+
+export interface ManualJobInferenceResponse {
+  job: ManualJobDraft;
+  warning?: string | null;
+}
+
 export interface UpdateJobInput {
   status?: JobStatus;
   jobDescription?: string;
@@ -149,6 +172,10 @@ export interface PipelineConfig {
   sources: JobSource[];              // Job sources to crawl
   profilePath: string;               // Path to profile JSON
   outputDir: string;                 // Directory for generated PDFs
+  enableCrawling?: boolean;
+  enableScoring?: boolean;
+  enableImporting?: boolean;
+  enableAutoTailoring?: boolean;
 }
 
 export interface PipelineRun {

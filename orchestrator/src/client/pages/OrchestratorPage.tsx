@@ -60,7 +60,8 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { copyTextToClipboard, formatJobForWebhook } from "@client/lib/jobCopy";
-import { PipelineProgress, DiscoveredPanel } from "../components";
+import { formatDate, formatDateTime } from "../lib/dateUtils";
+import { PipelineProgress, DiscoveredPanel, ManualImportSheet } from "../components";
 import { ReadyPanel } from "../components/ReadyPanel";
 import * as api from "../api";
 import { TailoringEditor } from "../components/TailoringEditor";
@@ -74,6 +75,7 @@ const sourceLabel: Record<JobSource, string> = {
   indeed: "Indeed",
   linkedin: "LinkedIn",
   ukvisajobs: "UK Visa Jobs",
+  manual: "Manual",
 };
 
 const orderedSources: JobSource[] = ["gradcracker", "indeed", "linkedin", "ukvisajobs"];
@@ -152,40 +154,6 @@ const emptyStateCopy: Record<FilterTab, string> = {
   discovered: "All discovered jobs have been processed.",
   applied: "You have not applied to any jobs yet.",
   all: "No jobs in the system yet. Run the pipeline to get started.",
-};
-
-const formatDate = (dateStr: string | null) => {
-  if (!dateStr) return null;
-  try {
-    return new Date(dateStr).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return dateStr;
-  }
-};
-
-const formatDateTime = (dateStr: string | null) => {
-  if (!dateStr) return null;
-  try {
-    const normalized = dateStr.includes("T") ? dateStr : dateStr.replace(" ", "T");
-    const parsed = new Date(normalized);
-    if (Number.isNaN(parsed.getTime())) return dateStr;
-    const date = parsed.toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-    const time = parsed.toLocaleTimeString("en-GB", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-    return `${date} ${time}`;
-  } catch {
-    return dateStr;
-  }
 };
 
 const safeFilenamePart = (value: string) => value.replace(/[^a-z0-9]/gi, "_");
@@ -324,6 +292,7 @@ export const OrchestratorPage: React.FC = () => {
   ];
   const [isLoading, setIsLoading] = useState(true);
   const [isPipelineRunning, setIsPipelineRunning] = useState(false);
+  const [isManualImportOpen, setIsManualImportOpen] = useState(false);
   const [processingJobId, setProcessingJobId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<FilterTab>("ready");
   const [searchQuery, setSearchQuery] = useState("");
@@ -383,6 +352,16 @@ export const OrchestratorPage: React.FC = () => {
       // Ignore errors
     }
   }, []);
+
+  const handleManualImported = useCallback(
+    async (jobId: string) => {
+      setActiveTab("discovered");
+      setSourceFilter("all");
+      await loadJobs();
+      setSelectedJobId(jobId);
+    },
+    [loadJobs],
+  );
 
   useEffect(() => {
     loadJobs();
@@ -1123,6 +1102,15 @@ export const OrchestratorPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setIsManualImportOpen(true)}
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Manual import</span>
+            </Button>
             <div className="flex items-center gap-1">
               <Button
                 size="sm"
@@ -1407,6 +1395,12 @@ export const OrchestratorPage: React.FC = () => {
           </div>
         </section>
       </main>
+
+      <ManualImportSheet
+        open={isManualImportOpen}
+        onOpenChange={setIsManualImportOpen}
+        onImported={handleManualImported}
+      />
 
       <Drawer open={isDetailDrawerOpen} onOpenChange={setIsDetailDrawerOpen}>
         <DrawerContent className="max-h-[90vh]">

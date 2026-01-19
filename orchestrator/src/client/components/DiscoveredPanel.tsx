@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { formatDate } from "../lib/dateUtils";
 import * as api from "../api";
 import { FitAssessment } from ".";
 import type { Job, ResumeProjectCatalogItem } from "../../shared/types";
@@ -49,19 +50,6 @@ interface DiscoveredPanelProps {
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const formatDate = (dateStr: string | null) => {
-  if (!dateStr) return null;
-  try {
-    return new Date(dateStr).toLocaleDateString("en-GB", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return dateStr;
-  }
-};
-
 const stripHtml = (value: string) =>
   value
     .replace(/<[^>]*>/g, " ")
@@ -73,6 +61,7 @@ const sourceLabel: Record<Job["source"], string> = {
   indeed: "Indeed",
   linkedin: "LinkedIn",
   ukvisajobs: "UK Visa Jobs",
+  manual: "Manual",
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
