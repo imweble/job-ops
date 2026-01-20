@@ -78,14 +78,24 @@ export async function generatePdf(
 
     // Inject tailored skills
     if (tailoredContent.skills) {
-      const newSkills = Array.isArray(tailoredContent.skills)
+      const rawSkills = Array.isArray(tailoredContent.skills)
         ? tailoredContent.skills
         : typeof tailoredContent.skills === 'string'
           ? JSON.parse(tailoredContent.skills)
           : null;
 
-      if (newSkills && resumeData.sections?.skills) {
-        resumeData.sections.skills.items = newSkills;
+      if (rawSkills && resumeData.sections?.skills) {
+        // Ensure each skill item has all required fields per OpenAPI spec
+        const normalizedSkills = rawSkills.map((skill: any, index: number) => ({
+          id: skill.id || `skill-${index}-${Date.now()}`,
+          hidden: skill.hidden ?? false,
+          icon: skill.icon || '',
+          name: skill.name || '',
+          proficiency: skill.proficiency || '',
+          level: skill.level ?? 0,
+          keywords: Array.isArray(skill.keywords) ? skill.keywords : [],
+        }));
+        resumeData.sections.skills.items = normalizedSkills;
       }
     }
 
@@ -131,14 +141,8 @@ export async function generatePdf(
 
     // 5. Import as temporary resume
     console.log(`   Importing temporary resume for job ${jobId}...`);
-    const timestamp = new Date().getTime();
-    const tempName = `[TEMP] ${resumeData.basics?.name || 'Resume'} - ${jobId.slice(0, 8)} (${timestamp})`;
 
-    tempResumeId = await importResume({
-      name: tempName,
-      slug: `temp-${jobId}-${timestamp}`,
-      data: resumeData,
-    });
+    tempResumeId = await importResume(resumeData);
 
     if (!tempResumeId) {
       throw new Error('Failed to get ID for imported resume');
