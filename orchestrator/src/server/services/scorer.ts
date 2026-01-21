@@ -14,6 +14,7 @@ interface SuitabilityResult {
 
 /**
  * Score a job's suitability based on profile and job description.
+ * Includes retry logic for when AI returns garbage responses.
  */
 export async function scoreJobSuitability(
   job: Job,
@@ -32,43 +33,72 @@ export async function scoreJobSuitability(
 
   const prompt = buildScoringPrompt(job, profile);
 
-  try {
-    const response = await fetch(OPENROUTER_API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'http://localhost',
-        'X-Title': 'JobOpsOrchestrator',
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: 'user', content: prompt }],
-        response_format: { type: 'json_object' },
-      }),
-    });
+  const MAX_RETRIES = 2;
+  let lastError: Error | null = null;
 
-    if (!response.ok) {
-      throw new Error(`OpenRouter error: ${response.status}`);
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      if (attempt > 0) {
+        console.log(`🔄 [Job ${job.id}] Retry attempt ${attempt}/${MAX_RETRIES}...`);
+        // Small delay before retry
+        await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+      }
+
+      const response = await fetch(OPENROUTER_API_URL, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'http://localhost',
+          'X-Title': 'JobOpsOrchestrator',
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: prompt }],
+          response_format: { type: 'json_object' },
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`OpenRouter error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0]?.message?.content;
+
+      if (!content) {
+        throw new Error('No content in response');
+      }
+
+      // Try to parse the response
+      const parsed = parseJsonFromContent(content, job.id);
+
+      // Validate we got a reasonable response
+      if (typeof parsed.score !== 'number' || isNaN(parsed.score)) {
+        throw new Error('Parsed response has no valid score');
+      }
+
+      return {
+        score: Math.min(100, Math.max(0, Math.round(parsed.score))),
+        reason: parsed.reason || 'No explanation provided',
+      };
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+
+      // Only retry on parsing errors, not on network/API errors
+      if (lastError.message.includes('Unable to parse JSON') ||
+        lastError.message.includes('Parsed response has no valid score')) {
+        console.warn(`⚠️ [Job ${job.id}] Attempt ${attempt + 1} failed: ${lastError.message}`);
+        continue; // Try again
+      }
+
+      // For other errors, don't retry
+      break;
     }
-
-    const data = await response.json();
-    const content = data.choices[0]?.message?.content;
-
-    if (!content) {
-      throw new Error('No content in response');
-    }
-
-    // Log raw response for debugging when issues occur
-    const parsed = parseJsonFromContent(content, job.id);
-    return {
-      score: Math.min(100, Math.max(0, parsed.score || 0)),
-      reason: parsed.reason || 'No explanation provided',
-    };
-  } catch (error) {
-    console.error('Failed to score job:', error);
-    return mockScore(job);
   }
+
+  console.error(`❌ [Job ${job.id}] All ${MAX_RETRIES + 1} attempts failed, using mock scoring. Last error:`, lastError?.message);
+  return mockScore(job);
 }
 
 /**
