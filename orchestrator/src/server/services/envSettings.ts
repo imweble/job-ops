@@ -7,12 +7,9 @@ const readableStringConfig: { settingKey: SettingKey, envKey: string }[] = [
   { settingKey: 'rxresumeEmail', envKey: 'RXRESUME_EMAIL' },
   { settingKey: 'ukvisajobsEmail', envKey: 'UKVISAJOBS_EMAIL' },
   { settingKey: 'basicAuthUser', envKey: 'BASIC_AUTH_USER' },
-  { settingKey: 'notionDatabaseId', envKey: 'NOTION_DATABASE_ID' },
 ];
 
-const readableBooleanConfig: { settingKey: SettingKey, envKey: string, defaultValue: boolean }[] = [
-  { settingKey: 'ukvisajobsHeadless', envKey: 'UKVISAJOBS_HEADLESS', defaultValue: true },
-];
+const readableBooleanConfig: { settingKey: SettingKey, envKey: string, defaultValue: boolean }[] = [];
 
 const privateStringConfig: { settingKey: SettingKey, envKey: string, hintKey: string }[] = [
   { settingKey: 'openrouterApiKey', envKey: 'OPENROUTER_API_KEY', hintKey: 'openrouterApiKeyHint' },
@@ -20,7 +17,6 @@ const privateStringConfig: { settingKey: SettingKey, envKey: string, hintKey: st
   { settingKey: 'ukvisajobsPassword', envKey: 'UKVISAJOBS_PASSWORD', hintKey: 'ukvisajobsPasswordHint' },
   { settingKey: 'basicAuthPassword', envKey: 'BASIC_AUTH_PASSWORD', hintKey: 'basicAuthPasswordHint' },
   { settingKey: 'webhookSecret', envKey: 'WEBHOOK_SECRET', hintKey: 'webhookSecretHint' },
-  { settingKey: 'notionApiKey', envKey: 'NOTION_API_KEY', hintKey: 'notionApiKeyHint' },
 ];
 
 export function normalizeEnvInput(value: string | null | undefined): string | null {
@@ -96,9 +92,13 @@ export async function getEnvSettingsData(): Promise<Record<string, string | bool
     privateValues[hintKey] = rawValue ? rawValue.slice(0, 4) : null;
   }
 
+  const basicAuthUser = (await settingsRepo.getSetting('basicAuthUser')) ?? process.env.BASIC_AUTH_USER;
+  const basicAuthPassword = (await settingsRepo.getSetting('basicAuthPassword')) ?? process.env.BASIC_AUTH_PASSWORD;
+
   return {
     ...readableValues,
     ...privateValues,
+    basicAuthActive: Boolean(basicAuthUser && basicAuthPassword),
   };
 }
 

@@ -307,29 +307,10 @@ settingsRouter.patch('/', async (req: Request, res: Response) => {
       applyEnvValue('UKVISAJOBS_PASSWORD', value);
     }
 
-    if ('ukvisajobsHeadless' in input) {
-      const value = input.ukvisajobsHeadless ?? null;
-      const serialized = serializeEnvBoolean(value);
-      await settingsRepo.setSetting('ukvisajobsHeadless', serialized);
-      applyEnvValue('UKVISAJOBS_HEADLESS', serialized);
-    }
-
     if ('webhookSecret' in input) {
       const value = normalizeEnvInput(input.webhookSecret);
       await settingsRepo.setSetting('webhookSecret', value);
       applyEnvValue('WEBHOOK_SECRET', value);
-    }
-
-    if ('notionApiKey' in input) {
-      const value = normalizeEnvInput(input.notionApiKey);
-      await settingsRepo.setSetting('notionApiKey', value);
-      applyEnvValue('NOTION_API_KEY', value);
-    }
-
-    if ('notionDatabaseId' in input) {
-      const value = normalizeEnvInput(input.notionDatabaseId);
-      await settingsRepo.setSetting('notionDatabaseId', value);
-      applyEnvValue('NOTION_DATABASE_ID', value);
     }
 
     const overrideModel = await settingsRepo.getSetting('model');

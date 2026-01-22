@@ -13,7 +13,6 @@ describe.sequential('Settings API routes', () => {
       env: {
         OPENROUTER_API_KEY: 'secret-key',
         RXRESUME_EMAIL: 'resume@example.com',
-        UKVISAJOBS_HEADLESS: 'false',
       },
     }));
   });
@@ -30,7 +29,7 @@ describe.sequential('Settings API routes', () => {
     expect(Array.isArray(body.data.searchTerms)).toBe(true);
     expect(body.data.rxresumeEmail).toBe('resume@example.com');
     expect(body.data.openrouterApiKeyHint).toBe('secr');
-    expect(body.data.ukvisajobsHeadless).toBe(false);
+    expect(body.data.basicAuthActive).toBe(false);
   });
 
   it('rejects invalid settings updates and persists overrides', async () => {
@@ -48,7 +47,6 @@ describe.sequential('Settings API routes', () => {
         searchTerms: ['engineer'],
         rxresumeEmail: 'updated@example.com',
         openrouterApiKey: 'updated-secret',
-        ukvisajobsHeadless: true,
       }),
     });
     const patchBody = await patchRes.json();
@@ -57,6 +55,5 @@ describe.sequential('Settings API routes', () => {
     expect(patchBody.data.overrideSearchTerms).toEqual(['engineer']);
     expect(patchBody.data.rxresumeEmail).toBe('updated@example.com');
     expect(patchBody.data.openrouterApiKeyHint).toBe('upda');
-    expect(patchBody.data.ukvisajobsHeadless).toBe(true);
   });
 });

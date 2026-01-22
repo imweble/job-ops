@@ -37,6 +37,6 @@ export type EnvSettingsValues = {
     ukvisajobsPasswordHint: string | null
     basicAuthPasswordHint: string | null
     webhookSecretHint: string | null
-    notionApiKeyHint: string | null
   }
+  basicAuthActive: boolean
 }

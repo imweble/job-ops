@@ -11,14 +11,11 @@ const EnvironmentSettingsHarness = () => {
       rxresumeEmail: "resume@example.com",
       ukvisajobsEmail: "visa@example.com",
       basicAuthUser: "admin",
-      notionDatabaseId: "db-123",
-      ukvisajobsHeadless: false,
       openrouterApiKey: "",
       rxresumePassword: "",
       ukvisajobsPassword: "",
       basicAuthPassword: "",
       webhookSecret: "",
-      notionApiKey: "",
     }
   })
 
@@ -31,8 +28,6 @@ const EnvironmentSettingsHarness = () => {
               rxresumeEmail: "resume@example.com",
               ukvisajobsEmail: "visa@example.com",
               basicAuthUser: "admin",
-              notionDatabaseId: "db-123",
-              ukvisajobsHeadless: false,
             },
             private: {
               openrouterApiKeyHint: "sk-1",
@@ -40,8 +35,8 @@ const EnvironmentSettingsHarness = () => {
               ukvisajobsPasswordHint: "pass",
               basicAuthPasswordHint: "abcd",
               webhookSecretHint: "sec-",
-              notionApiKeyHint: "not-",
             },
+            basicAuthActive: true,
           }}
           isLoading={false}
           isSaving={false}
@@ -52,22 +47,25 @@ const EnvironmentSettingsHarness = () => {
 }
 
 describe("EnvironmentSettingsSection", () => {
-  it("renders readable values and masks private secrets with hints", () => {
+  it("renders values grouped logically and masks private secrets with hints", () => {
     render(<EnvironmentSettingsHarness />)
 
     expect(screen.getByDisplayValue("resume@example.com")).toBeInTheDocument()
     expect(screen.getByDisplayValue("visa@example.com")).toBeInTheDocument()
-    expect(screen.getByDisplayValue("admin")).toBeInTheDocument()
-    expect(screen.getByDisplayValue("db-123")).toBeInTheDocument()
 
     expect(screen.getByText("sk-1********")).toBeInTheDocument()
     expect(screen.getByText("pass********")).toBeInTheDocument()
     expect(screen.getByText("abcd********")).toBeInTheDocument()
     expect(screen.getByText("sec-********")).toBeInTheDocument()
-    expect(screen.getByText("not-********")).toBeInTheDocument()
     expect(screen.getByText("Not set")).toBeInTheDocument()
 
-    const headlessToggle = screen.getByLabelText("UKVisaJobs headless mode")
-    expect(headlessToggle).not.toBeChecked()
+    // Basic Auth
+    expect(screen.getByLabelText("Enable basic authentication")).toBeChecked()
+    expect(screen.getByDisplayValue("admin")).toBeInTheDocument()
+
+    // Sections
+    expect(screen.getByText("External Services")).toBeInTheDocument()
+    expect(screen.getByText("Service Accounts")).toBeInTheDocument()
+    expect(screen.getByText("Security")).toBeInTheDocument()
   })
 })

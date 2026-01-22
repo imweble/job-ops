@@ -49,10 +49,7 @@ const DEFAULT_FORM_VALUES: UpdateSettingsInput = {
   basicAuthPassword: "",
   ukvisajobsEmail: "",
   ukvisajobsPassword: "",
-  ukvisajobsHeadless: null,
   webhookSecret: "",
-  notionApiKey: "",
-  notionDatabaseId: "",
 }
 
 const NULL_SETTINGS_PAYLOAD: UpdateSettingsInput = {
@@ -80,10 +77,7 @@ const NULL_SETTINGS_PAYLOAD: UpdateSettingsInput = {
   basicAuthPassword: null,
   ukvisajobsEmail: null,
   ukvisajobsPassword: null,
-  ukvisajobsHeadless: null,
   webhookSecret: null,
-  notionApiKey: null,
-  notionDatabaseId: null,
 }
 
 const mapSettingsToForm = (data: AppSettings): UpdateSettingsInput => ({
@@ -111,10 +105,7 @@ const mapSettingsToForm = (data: AppSettings): UpdateSettingsInput => ({
   basicAuthPassword: "",
   ukvisajobsEmail: data.ukvisajobsEmail ?? "",
   ukvisajobsPassword: "",
-  ukvisajobsHeadless: data.ukvisajobsHeadless,
   webhookSecret: "",
-  notionApiKey: "",
-  notionDatabaseId: data.notionDatabaseId ?? "",
 })
 
 const normalizeString = (value: string | null | undefined) => {
@@ -214,8 +205,6 @@ const getDerivedSettings = (settings: AppSettings | null) => {
         rxresumeEmail: settings?.rxresumeEmail ?? "",
         ukvisajobsEmail: settings?.ukvisajobsEmail ?? "",
         basicAuthUser: settings?.basicAuthUser ?? "",
-        notionDatabaseId: settings?.notionDatabaseId ?? "",
-        ukvisajobsHeadless: settings?.ukvisajobsHeadless ?? true,
       },
       private: {
         openrouterApiKeyHint: settings?.openrouterApiKeyHint ?? null,
@@ -223,10 +212,11 @@ const getDerivedSettings = (settings: AppSettings | null) => {
         ukvisajobsPasswordHint: settings?.ukvisajobsPasswordHint ?? null,
         basicAuthPasswordHint: settings?.basicAuthPasswordHint ?? null,
         webhookSecretHint: settings?.webhookSecretHint ?? null,
-        notionApiKeyHint: settings?.notionApiKeyHint ?? null,
       },
+      basicAuthActive: settings?.basicAuthActive ?? false,
     },
     defaultResumeProjects: settings?.defaultResumeProjects ?? null,
+
     profileProjects,
     maxProjectsTotal: profileProjects.length,
   }
@@ -316,14 +306,6 @@ export const SettingsPage: React.FC = () => {
         envPayload.basicAuthUser = normalizeString(data.basicAuthUser)
       }
 
-      if (dirtyFields.notionDatabaseId) {
-        envPayload.notionDatabaseId = normalizeString(data.notionDatabaseId)
-      }
-
-      if (dirtyFields.ukvisajobsHeadless) {
-        envPayload.ukvisajobsHeadless = data.ukvisajobsHeadless ?? null
-      }
-
       if (dirtyFields.openrouterApiKey) {
         const value = normalizePrivateInput(data.openrouterApiKey)
         if (value !== undefined) envPayload.openrouterApiKey = value
@@ -347,11 +329,6 @@ export const SettingsPage: React.FC = () => {
       if (dirtyFields.webhookSecret) {
         const value = normalizePrivateInput(data.webhookSecret)
         if (value !== undefined) envPayload.webhookSecret = value
-      }
-
-      if (dirtyFields.notionApiKey) {
-        const value = normalizePrivateInput(data.notionApiKey)
-        if (value !== undefined) envPayload.notionApiKey = value
       }
 
       const payload: UpdateSettingsInput = {

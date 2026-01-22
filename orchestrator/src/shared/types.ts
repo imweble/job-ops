@@ -390,8 +390,6 @@ export interface AppSettings {
   basicAuthPasswordHint: string | null;
   ukvisajobsEmail: string | null;
   ukvisajobsPasswordHint: string | null;
-  ukvisajobsHeadless: boolean;
   webhookSecretHint: string | null;
-  notionApiKeyHint: string | null;
-  notionDatabaseId: string | null;
+  basicAuthActive: boolean;
 }

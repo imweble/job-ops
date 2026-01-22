@@ -31,10 +31,7 @@ export const updateSettingsSchema = z.object({
   basicAuthPassword: z.string().trim().max(2000).nullable().optional(),
   ukvisajobsEmail: z.string().trim().max(200).nullable().optional(),
   ukvisajobsPassword: z.string().trim().max(2000).nullable().optional(),
-  ukvisajobsHeadless: z.boolean().nullable().optional(),
   webhookSecret: z.string().trim().max(2000).nullable().optional(),
-  notionApiKey: z.string().trim().max(2000).nullable().optional(),
-  notionDatabaseId: z.string().trim().max(200).nullable().optional(),
 });
 
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
