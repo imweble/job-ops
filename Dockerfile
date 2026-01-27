@@ -36,7 +36,6 @@ RUN --mount=type=cache,target=/root/.npm \
 # Camoufox fetch (cache npm + whatever it downloads to; if it uses HOME, this helps)
 WORKDIR /app/extractors/gradcracker
 RUN --mount=type=cache,target=/root/.npm \
-    --mount=type=cache,target=/root/.cache \
     npx camoufox fetch
 
 WORKDIR /app/extractors/ukvisajobs
@@ -76,6 +75,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 # Copy cached browsers from builder (fast; no redownload)
 COPY --from=builder /ms-playwright /ms-playwright
+COPY --from=builder /root/.cache/camoufox /root/.cache/camoufox
 
 # Copy built app + node_modules from builder (fast path)
 COPY --from=builder /app/orchestrator /app/orchestrator
