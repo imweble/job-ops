@@ -6,7 +6,7 @@ export type JobStatus =
   | "discovered" // Crawled but not processed
   | "processing" // Currently generating resume
   | "ready" // PDF generated, waiting for user to apply
-  | "applied" // User marked as applied (added to Notion)
+  | "applied" // User marked as applied
   | "skipped" // User skipped this job
   | "expired"; // Deadline passed
 
@@ -160,7 +160,6 @@ export interface Job {
   tailoredSkills: string | null; // Generated resume skills (JSON)
   selectedProjectIds: string | null; // Comma-separated IDs of selected projects
   pdfPath: string | null; // Path to generated PDF
-  notionPageId: string | null; // Notion page ID if synced
   sponsorMatchScore: number | null; // 0-100 fuzzy match score with visa sponsors
   sponsorMatchNames: string | null; // JSON array of matched sponsor names (when 100% matches or top match)
 
@@ -314,7 +313,6 @@ export interface UpdateJobInput {
   tailoredSkills?: string;
   selectedProjectIds?: string;
   pdfPath?: string;
-  notionPageId?: string;
   appliedAt?: string;
   sponsorMatchScore?: number;
   sponsorMatchNames?: string;
@@ -601,27 +599,13 @@ export interface AppSettings {
   jobspyResultsWanted: number;
   defaultJobspyResultsWanted: number;
   overrideJobspyResultsWanted: number | null;
-  jobspyHoursOld: number;
-  defaultJobspyHoursOld: number;
-  overrideJobspyHoursOld: number | null;
   jobspyCountryIndeed: string;
   defaultJobspyCountryIndeed: string;
   overrideJobspyCountryIndeed: string | null;
-  jobspySites: string[];
-  defaultJobspySites: string[];
-  overrideJobspySites: string[] | null;
-  jobspyLinkedinFetchDescription: boolean;
-  defaultJobspyLinkedinFetchDescription: boolean;
-  overrideJobspyLinkedinFetchDescription: boolean | null;
-  jobspyIsRemote: boolean;
-  defaultJobspyIsRemote: boolean;
-  overrideJobspyIsRemote: boolean | null;
   showSponsorInfo: boolean;
   defaultShowSponsorInfo: boolean;
   overrideShowSponsorInfo: boolean | null;
   llmApiKeyHint: string | null;
-  /** @deprecated Use llmApiKeyHint instead. */
-  openrouterApiKeyHint: string | null;
   rxresumeEmail: string | null;
   rxresumePasswordHint: string | null;
   basicAuthUser: string | null;

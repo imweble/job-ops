@@ -1,6 +1,5 @@
-export { DiscoveredPanel } from "./discovered-panel";
+export { DiscoveredPanel } from "./discovered-panel/DiscoveredPanel";
 export { FitAssessment } from "./FitAssessment";
-export { Header } from "./Header";
 export { JobHeader } from "./JobHeader";
 export * from "./layout";
 export { ManualImportSheet } from "./ManualImportSheet";

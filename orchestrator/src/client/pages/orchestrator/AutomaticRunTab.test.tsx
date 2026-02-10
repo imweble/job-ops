@@ -1,4 +1,4 @@
-import type { AppSettings } from "@shared/types";
+import { createAppSettings } from "@shared/testing/factories.js";
 import { render, screen, waitFor } from "@testing-library/react";
 import type React from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -22,12 +22,11 @@ describe("AutomaticRunTab", () => {
     render(
       <AutomaticRunTab
         open
-        settings={
-          {
-            searchTerms: ["backend engineer"],
-            jobspyCountryIndeed: "us",
-          } as AppSettings
-        }
+        settings={createAppSettings({
+          searchTerms: ["backend engineer"],
+          jobspyCountryIndeed: "us",
+          jobspyLocation: "",
+        })}
         enabledSources={["linkedin", "gradcracker", "ukvisajobs"]}
         pipelineSources={["linkedin"]}
         onToggleSource={vi.fn()}
@@ -48,12 +47,11 @@ describe("AutomaticRunTab", () => {
     render(
       <AutomaticRunTab
         open
-        settings={
-          {
-            searchTerms: ["backend engineer"],
-            jobspyCountryIndeed: "united states",
-          } as AppSettings
-        }
+        settings={createAppSettings({
+          searchTerms: ["backend engineer"],
+          jobspyCountryIndeed: "united states",
+          jobspyLocation: "",
+        })}
         enabledSources={["linkedin", "gradcracker", "ukvisajobs"]}
         pipelineSources={["linkedin", "gradcracker", "ukvisajobs"]}
         onToggleSource={vi.fn()}
@@ -71,16 +69,15 @@ describe("AutomaticRunTab", () => {
     expect(screen.getByRole("button", { name: "UK Visa Jobs" })).toBeDisabled();
   });
 
-  it("shows disabled source guidance copy for UK-only source", () => {
+  it("shows disabled source guidance copy for UK-only source", async () => {
     render(
       <AutomaticRunTab
         open
-        settings={
-          {
-            searchTerms: ["backend engineer"],
-            jobspyCountryIndeed: "united states",
-          } as AppSettings
-        }
+        settings={createAppSettings({
+          searchTerms: ["backend engineer"],
+          jobspyCountryIndeed: "united states",
+          jobspyLocation: "",
+        })}
         enabledSources={["linkedin", "gradcracker", "ukvisajobs"]}
         pipelineSources={["linkedin"]}
         onToggleSource={vi.fn()}
@@ -103,12 +100,11 @@ describe("AutomaticRunTab", () => {
     render(
       <AutomaticRunTab
         open
-        settings={
-          {
-            searchTerms: ["backend engineer"],
-            jobspyCountryIndeed: "japan",
-          } as AppSettings
-        }
+        settings={createAppSettings({
+          searchTerms: ["backend engineer"],
+          jobspyCountryIndeed: "japan",
+          jobspyLocation: "",
+        })}
         enabledSources={["linkedin", "glassdoor"]}
         pipelineSources={["linkedin", "glassdoor"]}
         onToggleSource={vi.fn()}
@@ -135,13 +131,11 @@ describe("AutomaticRunTab", () => {
     render(
       <AutomaticRunTab
         open
-        settings={
-          {
-            searchTerms: ["backend engineer"],
-            jobspyCountryIndeed: "united kingdom",
-            jobspyLocation: "United Kingdom",
-          } as AppSettings
-        }
+        settings={createAppSettings({
+          searchTerms: ["backend engineer"],
+          jobspyCountryIndeed: "united kingdom",
+          jobspyLocation: "United Kingdom",
+        })}
         enabledSources={["linkedin", "glassdoor"]}
         pipelineSources={["linkedin", "glassdoor"]}
         onToggleSource={vi.fn()}

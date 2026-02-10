@@ -40,7 +40,7 @@ orchestrator/
 
    OpenRouter is the default LLM provider, but LM Studio, Ollama, OpenAI, and Gemini are also supported.
 
-   Deprecated: `OPENROUTER_API_KEY` / `openrouterApiKey`. Use `LLM_API_KEY` / `llmApiKey` instead (legacy values are auto-migrated/copied for compatibility).
+   Use `LLM_API_KEY` / `llmApiKey` to configure providers that require an API key.
 
 3. **Initialize database:**
    ```bash
@@ -66,7 +66,7 @@ orchestrator/
 | GET | `/api/jobs/:id` | Get single job |
 | PATCH | `/api/jobs/:id` | Update job |
 | POST | `/api/jobs/:id/process` | Generate resume for job |
-| POST | `/api/jobs/:id/apply` | Mark as applied + sync to Notion |
+| POST | `/api/jobs/:id/apply` | Mark as applied |
 | POST | `/api/jobs/:id/skip` | Mark as skipped |
 
 ### Pipeline
@@ -92,7 +92,7 @@ orchestrator/
    - Use command bar search (`Cmd/Ctrl+K`) to quickly find and open jobs
    - Click "View Job" to open application
    - Download PDF and apply manually
-   - Click "Mark Applied" → syncs to Notion
+   - Click "Mark Applied" to mark application status
 
 ## n8n Setup
 

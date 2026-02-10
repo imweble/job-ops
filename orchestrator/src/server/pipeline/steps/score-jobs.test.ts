@@ -1,4 +1,4 @@
-import type { Job } from "@shared/types";
+import { createJob } from "@shared/testing/factories";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { scoreJobsStep } from "./score-jobs";
 
@@ -36,18 +36,6 @@ vi.mock("../progress", () => ({
   },
 }));
 
-function createMockJob(overrides: Partial<Job> = {}): Job {
-  return {
-    id: "job-1",
-    title: "Software Engineer",
-    employer: "Acme Corp",
-    status: "discovered",
-    suitabilityScore: null,
-    suitabilityReason: null,
-    ...overrides,
-  } as Job;
-}
-
 describe("scoreJobsStep auto-skip behavior", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -58,7 +46,13 @@ describe("scoreJobsStep auto-skip behavior", () => {
     const visaSponsors = await import("../../services/visa-sponsors/index");
 
     vi.mocked(jobsRepo.getUnscoredDiscoveredJobs).mockResolvedValue([
-      createMockJob(),
+      createJob({
+        title: "Software Engineer",
+        employer: "Acme Corp",
+        status: "discovered",
+        suitabilityScore: null,
+        suitabilityReason: null,
+      }),
     ]);
     vi.mocked(jobsRepo.updateJob).mockResolvedValue(null);
     vi.mocked(settingsRepo.getSetting).mockResolvedValue(null);
@@ -164,7 +158,14 @@ describe("scoreJobsStep auto-skip behavior", () => {
 
     vi.mocked(settingsRepo.getSetting).mockResolvedValue("50");
     vi.mocked(jobsRepo.getUnscoredDiscoveredJobs).mockResolvedValue([
-      createMockJob({ id: "job-applied", status: "applied" }),
+      createJob({
+        id: "job-applied",
+        status: "applied",
+        title: "Software Engineer",
+        employer: "Acme Corp",
+        suitabilityScore: null,
+        suitabilityReason: null,
+      }),
     ]);
 
     await scoreJobsStep({ profile: {} });

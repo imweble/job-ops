@@ -1,4 +1,4 @@
-import type { Job } from "@shared/types";
+import { createJob } from "@shared/testing/factories";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickProjectIdsForJob } from "./projectSelection";
 import { scoreJobSuitability } from "./scorer";
@@ -12,70 +12,16 @@ vi.mock("../repositories/settings", () => ({
 // We need to mock 'fetch' globally for these tests
 const globalFetch = global.fetch;
 
-const now = new Date().toISOString();
-
-// A simple mock job
-const mockJob: Job = {
+const mockJob = createJob({
   id: "test-job",
   source: "gradcracker",
-  sourceJobId: null,
-  jobUrlDirect: null,
-  datePosted: null,
   title: "Senior Engineer",
   employer: "Test Corp",
-  employerUrl: null,
-  jobUrl: "http://test.com",
-  applicationLink: null,
-  disciplines: null,
-  deadline: null,
-  salary: null,
-  location: null,
-  degreeRequired: null,
-  starting: null,
   jobDescription: "Looking for a TypeScript and React expert.",
   status: "discovered",
-  outcome: null,
-  closedAt: null,
   suitabilityScore: null,
   suitabilityReason: null,
-  tailoredSummary: null,
-  tailoredHeadline: null,
-  tailoredSkills: null,
-  selectedProjectIds: null,
-  pdfPath: null,
-  notionPageId: null,
-  sponsorMatchScore: null,
-  sponsorMatchNames: null,
-  jobType: null,
-  salarySource: null,
-  salaryInterval: null,
-  salaryMinAmount: null,
-  salaryMaxAmount: null,
-  salaryCurrency: null,
-  isRemote: null,
-  jobLevel: null,
-  jobFunction: null,
-  listingType: null,
-  emails: null,
-  companyIndustry: null,
-  companyLogo: null,
-  companyUrlDirect: null,
-  companyAddresses: null,
-  companyNumEmployees: null,
-  companyRevenue: null,
-  companyDescription: null,
-  skills: null,
-  experienceRange: null,
-  companyRating: null,
-  companyReviewsCount: null,
-  vacancyCount: null,
-  workFromHomeType: null,
-  discoveredAt: now,
-  processedAt: null,
-  appliedAt: null,
-  createdAt: now,
-  updatedAt: now,
-};
+});
 
 const mockProfile = { name: "Test User" };
 

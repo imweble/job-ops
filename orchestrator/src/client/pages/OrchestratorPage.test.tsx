@@ -1,4 +1,4 @@
-import type { Job } from "@shared/types.js";
+import { createJob } from "@shared/testing/factories.js";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import { toast } from "sonner";
@@ -47,70 +47,35 @@ let mockAutomaticRunValues = {
   country: "united kingdom",
 };
 
-const jobFixture: Job = {
+const jobFixture = createJob({
   id: "job-1",
   source: "linkedin",
-  sourceJobId: null,
-  jobUrlDirect: null,
-  datePosted: null,
   title: "Backend Engineer",
   employer: "Acme",
-  employerUrl: null,
-  jobUrl: "https://example.com/job",
-  applicationLink: null,
-  disciplines: null,
-  deadline: null,
-  salary: null,
   location: "London",
-  degreeRequired: null,
-  starting: null,
   jobDescription: "Build APIs",
   status: "ready",
-  outcome: null,
-  closedAt: null,
-  suitabilityScore: 90,
-  suitabilityReason: null,
-  tailoredSummary: null,
-  tailoredHeadline: null,
-  tailoredSkills: null,
-  selectedProjectIds: null,
-  pdfPath: null,
-  notionPageId: null,
-  sponsorMatchScore: null,
-  sponsorMatchNames: null,
-  jobType: null,
-  salarySource: null,
-  salaryInterval: null,
-  salaryMinAmount: null,
-  salaryMaxAmount: null,
-  salaryCurrency: null,
-  isRemote: null,
-  jobLevel: null,
-  jobFunction: null,
-  listingType: null,
-  emails: null,
-  companyIndustry: null,
-  companyLogo: null,
-  companyUrlDirect: null,
-  companyAddresses: null,
-  companyNumEmployees: null,
-  companyRevenue: null,
-  companyDescription: null,
-  skills: null,
-  experienceRange: null,
-  companyRating: null,
-  companyReviewsCount: null,
-  vacancyCount: null,
-  workFromHomeType: null,
-  discoveredAt: "2025-01-01T00:00:00Z",
-  processedAt: null,
-  appliedAt: null,
-  createdAt: "2025-01-01T00:00:00Z",
-  updatedAt: "2025-01-02T00:00:00Z",
-};
+});
 
-const job2: Job = { ...jobFixture, id: "job-2", status: "discovered" };
-const processingJob: Job = { ...jobFixture, id: "job-3", status: "processing" };
+const job2 = createJob({
+  id: "job-2",
+  source: "linkedin",
+  title: "Backend Engineer",
+  employer: "Acme",
+  location: "London",
+  jobDescription: "Build APIs",
+  status: "discovered",
+});
+
+const processingJob = createJob({
+  id: "job-3",
+  source: "linkedin",
+  title: "Backend Engineer",
+  employer: "Acme",
+  location: "London",
+  jobDescription: "Build APIs",
+  status: "processing",
+});
 
 const createMatchMedia = (matches: boolean) =>
   vi.fn().mockImplementation((query: string) => ({
@@ -155,7 +120,6 @@ vi.mock("./orchestrator/usePipelineSources", () => ({
 vi.mock("../hooks/useSettings", () => ({
   useSettings: () => ({
     settings: {
-      jobspySites: ["indeed", "linkedin"],
       ukvisajobsEmail: null,
       ukvisajobsPasswordHint: null,
     },
@@ -397,11 +361,11 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <LocationWatcher />
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -417,10 +381,10 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -438,11 +402,11 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/all"]}>
+      <MemoryRouter initialEntries={["/jobs/all"]}>
         <LocationWatcher />
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -467,10 +431,10 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -497,13 +461,13 @@ describe("OrchestratorPage", () => {
       render(
         <MemoryRouter
           initialEntries={[
-            "/ready?source=linkedin&sponsor=confirmed&salaryMode=between&salaryMin=60000&salaryMax=90000&q=backend&sort=title-asc",
+            "/jobs/ready?source=linkedin&sponsor=confirmed&salaryMode=between&salaryMin=60000&salaryMax=90000&q=backend&sort=title-asc",
           ]}
         >
           <LocationWatcher />
           <Routes>
-            <Route path="/:tab" element={<OrchestratorPage />} />
-            <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+            <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+            <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
           </Routes>
         </MemoryRouter>,
       );
@@ -536,11 +500,11 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready?q=backend&sort=title-asc"]}>
+      <MemoryRouter initialEntries={["/jobs/ready?q=backend&sort=title-asc"]}>
         <LocationWatcher />
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -558,11 +522,11 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <LocationWatcher />
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -579,11 +543,11 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <LocationWatcher />
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -630,10 +594,10 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -651,10 +615,10 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -668,10 +632,10 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready?source=ukvisajobs"]}>
+      <MemoryRouter initialEntries={["/jobs/ready?source=ukvisajobs"]}>
         <LocationWatcher />
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -692,10 +656,10 @@ describe("OrchestratorPage", () => {
       .mockReturnValue(0 as unknown as NodeJS.Timeout);
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -733,10 +697,10 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -757,10 +721,10 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -781,10 +745,10 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -808,10 +772,10 @@ describe("OrchestratorPage", () => {
     };
 
     render(
-      <MemoryRouter initialEntries={["/ready"]}>
+      <MemoryRouter initialEntries={["/jobs/ready"]}>
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );
@@ -830,10 +794,10 @@ describe("OrchestratorPage", () => {
     ) as unknown as typeof window.matchMedia;
 
     render(
-      <MemoryRouter initialEntries={["/all"]}>
+      <MemoryRouter initialEntries={["/jobs/all"]}>
         <Routes>
-          <Route path="/:tab" element={<OrchestratorPage />} />
-          <Route path="/:tab/:jobId" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab" element={<OrchestratorPage />} />
+          <Route path="/jobs/:tab/:jobId" element={<OrchestratorPage />} />
         </Routes>
       </MemoryRouter>,
     );

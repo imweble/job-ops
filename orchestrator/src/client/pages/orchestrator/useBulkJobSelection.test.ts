@@ -1,4 +1,5 @@
-import type { BulkJobActionResponse, Job, JobStatus } from "@shared/types.js";
+import { createJob } from "@shared/testing/factories.js";
+import type { BulkJobActionResponse } from "@shared/types.js";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { toast } from "sonner";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -15,70 +16,6 @@ vi.mock("sonner", () => ({
     success: vi.fn(),
   },
 }));
-
-function createJob(id: string, status: JobStatus): Job {
-  return {
-    id,
-    source: "linkedin",
-    sourceJobId: null,
-    jobUrlDirect: null,
-    datePosted: null,
-    title: `Role ${id}`,
-    employer: "Acme",
-    employerUrl: null,
-    jobUrl: `https://example.com/${id}`,
-    applicationLink: null,
-    disciplines: null,
-    deadline: null,
-    salary: null,
-    location: null,
-    degreeRequired: null,
-    starting: null,
-    jobDescription: null,
-    status,
-    outcome: null,
-    closedAt: null,
-    suitabilityScore: null,
-    suitabilityReason: null,
-    tailoredSummary: null,
-    tailoredHeadline: null,
-    tailoredSkills: null,
-    selectedProjectIds: null,
-    pdfPath: null,
-    notionPageId: null,
-    sponsorMatchScore: null,
-    sponsorMatchNames: null,
-    jobType: null,
-    salarySource: null,
-    salaryInterval: null,
-    salaryMinAmount: null,
-    salaryMaxAmount: null,
-    salaryCurrency: null,
-    isRemote: null,
-    jobLevel: null,
-    jobFunction: null,
-    listingType: null,
-    emails: null,
-    companyIndustry: null,
-    companyLogo: null,
-    companyUrlDirect: null,
-    companyAddresses: null,
-    companyNumEmployees: null,
-    companyRevenue: null,
-    companyDescription: null,
-    skills: null,
-    experienceRange: null,
-    companyRating: null,
-    companyReviewsCount: null,
-    vacancyCount: null,
-    workFromHomeType: null,
-    discoveredAt: "2025-01-01T00:00:00Z",
-    processedAt: null,
-    appliedAt: null,
-    createdAt: "2025-01-01T00:00:00Z",
-    updatedAt: "2025-01-01T00:00:00Z",
-  };
-}
 
 type Deferred<T> = {
   promise: Promise<T>;
@@ -100,7 +37,7 @@ describe("useBulkJobSelection", () => {
 
   it("caps select-all to the API max", () => {
     const activeJobs = Array.from({ length: 101 }, (_, index) =>
-      createJob(`job-${index + 1}`, "discovered"),
+      createJob({ id: `job-${index + 1}`, status: "discovered" }),
     );
     const loadJobs = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() =>
@@ -120,7 +57,7 @@ describe("useBulkJobSelection", () => {
 
   it("does not send bulk requests above the max selection size", async () => {
     const activeJobs = Array.from({ length: 101 }, (_, index) =>
-      createJob(`job-${index + 1}`, "discovered"),
+      createJob({ id: `job-${index + 1}`, status: "discovered" }),
     );
     const loadJobs = vi.fn().mockResolvedValue(undefined);
     const { result } = renderHook(() =>
@@ -146,9 +83,9 @@ describe("useBulkJobSelection", () => {
 
   it("reconciles failures with selection changes made during in-flight action", async () => {
     const activeJobs = [
-      createJob("job-1", "discovered"),
-      createJob("job-2", "discovered"),
-      createJob("job-3", "discovered"),
+      createJob({ id: "job-1", status: "discovered" }),
+      createJob({ id: "job-2", status: "discovered" }),
+      createJob({ id: "job-3", status: "discovered" }),
     ];
     const loadJobs = vi.fn().mockResolvedValue(undefined);
     const pending = deferred<BulkJobActionResponse>();
@@ -184,7 +121,11 @@ describe("useBulkJobSelection", () => {
         succeeded: 1,
         failed: 1,
         results: [
-          { jobId: "job-1", ok: true, job: createJob("job-1", "skipped") },
+          {
+            jobId: "job-1",
+            ok: true,
+            job: createJob({ id: "job-1", status: "skipped" }),
+          },
           {
             jobId: "job-2",
             ok: false,
@@ -202,8 +143,8 @@ describe("useBulkJobSelection", () => {
 
   it("runs bulk rescore and reports success copy", async () => {
     const activeJobs = [
-      createJob("job-1", "ready"),
-      createJob("job-2", "ready"),
+      createJob({ id: "job-1", status: "ready" }),
+      createJob({ id: "job-2", status: "ready" }),
     ];
     const loadJobs = vi.fn().mockResolvedValue(undefined);
     vi.mocked(api.bulkJobAction).mockResolvedValue({
@@ -212,8 +153,16 @@ describe("useBulkJobSelection", () => {
       succeeded: 2,
       failed: 0,
       results: [
-        { jobId: "job-1", ok: true, job: createJob("job-1", "ready") },
-        { jobId: "job-2", ok: true, job: createJob("job-2", "ready") },
+        {
+          jobId: "job-1",
+          ok: true,
+          job: createJob({ id: "job-1", status: "ready" }),
+        },
+        {
+          jobId: "job-2",
+          ok: true,
+          job: createJob({ id: "job-2", status: "ready" }),
+        },
       ],
     });
 

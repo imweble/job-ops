@@ -8,12 +8,17 @@ export type NavLink = {
 };
 
 export const NAV_LINKS: NavLink[] = [
-  { to: "/home", label: "Home", icon: Home },
+  { to: "/overview", label: "Overview", icon: Home },
   {
-    to: "/ready",
-    label: "Dashboard",
+    to: "/jobs/ready",
+    label: "Jobs",
     icon: LayoutDashboard,
-    activePaths: ["/ready", "/discovered", "/applied", "/all"],
+    activePaths: [
+      "/jobs/ready",
+      "/jobs/discovered",
+      "/jobs/applied",
+      "/jobs/all",
+    ],
   },
   { to: "/visa-sponsors", label: "Visa Sponsors", icon: Shield },
   { to: "/settings", label: "Settings", icon: Settings },
@@ -23,4 +28,10 @@ export const isNavActive = (
   pathname: string,
   to: string,
   activePaths?: string[],
-) => pathname === to || (activePaths ? activePaths.includes(pathname) : false);
+) => {
+  if (pathname === to) return true;
+  if (!activePaths) return false;
+  return activePaths.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`),
+  );
+};
