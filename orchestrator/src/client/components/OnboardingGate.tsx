@@ -54,6 +54,22 @@ type OnboardingFormData = {
   rxresumeBaseResumeId: string | null;
 };
 
+function getStepPrimaryLabel(input: {
+  currentStep: string | null;
+  llmValidated: boolean;
+  rxresumeValidated: boolean;
+  baseResumeValidated: boolean;
+}): string {
+  const toLabel = (isValidated: boolean): string =>
+    isValidated ? "Revalidate" : "Validate";
+
+  if (input.currentStep === "llm") return toLabel(input.llmValidated);
+  if (input.currentStep === "rxresume") return toLabel(input.rxresumeValidated);
+  if (input.currentStep === "baseresume")
+    return toLabel(input.baseResumeValidated);
+  return "Validate";
+}
+
 export const OnboardingGate: React.FC = () => {
   const {
     settings,
@@ -107,13 +123,15 @@ export const OnboardingGate: React.FC = () => {
       values.llmProvider || settings?.llmProvider || "openrouter",
     );
     const providerConfig = getLlmProviderConfig(selectedProvider);
-    const { requiresApiKey } = providerConfig;
+    const { requiresApiKey, showBaseUrl } = providerConfig;
 
     setIsValidatingLlm(true);
     try {
       const result = await api.validateLlm({
         provider: selectedProvider,
-        baseUrl: values.llmBaseUrl.trim() || undefined,
+        baseUrl: showBaseUrl
+          ? values.llmBaseUrl.trim() || undefined
+          : undefined,
         apiKey: requiresApiKey
           ? values.llmApiKey.trim() || undefined
           : undefined,
@@ -198,7 +216,6 @@ export const OnboardingGate: React.FC = () => {
     hasCheckedValidations &&
     !(llmValidated && rxresumeValidation.valid && baseResumeValidation.valid);
 
-  const llmKeyCurrent = llmKeyHint ? formatSecretHint(llmKeyHint) : undefined;
   const rxresumeEmailCurrent = settings?.rxresumeEmail?.trim()
     ? settings.rxresumeEmail
     : undefined;
@@ -471,20 +488,12 @@ export const OnboardingGate: React.FC = () => {
     isValidatingRxresume ||
     isValidatingBaseResume;
   const canGoBack = stepIndex > 0;
-  const primaryLabel =
-    currentStep === "llm"
-      ? llmValidated
-        ? "Revalidate"
-        : "Validate"
-      : currentStep === "rxresume"
-        ? rxresumeValidation.valid
-          ? "Revalidate"
-          : "Validate"
-        : currentStep === "baseresume"
-          ? baseResumeValidation.valid
-            ? "Revalidate"
-            : "Validate"
-          : "Validate";
+  const primaryLabel = getStepPrimaryLabel({
+    currentStep,
+    llmValidated,
+    rxresumeValidated: rxresumeValidation.valid,
+    baseResumeValidated: baseResumeValidation.valid,
+  });
 
   const handlePrimaryAction = async () => {
     if (!currentStep) return;
@@ -648,8 +657,11 @@ export const OnboardingGate: React.FC = () => {
                         }}
                         type="password"
                         placeholder="Enter key"
-                        current={llmKeyCurrent}
-                        helper={providerConfig.keyHelper}
+                        helper={
+                          llmKeyHint
+                            ? `${providerConfig.keyHelper}. Leave blank to use the saved key.`
+                            : providerConfig.keyHelper
+                        }
                         disabled={isSavingEnv}
                       />
                     )}
