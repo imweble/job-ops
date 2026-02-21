@@ -4,26 +4,22 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
-import { logger } from "@infra/logger";
-import { sanitizeUnknown } from "@infra/sanitize";
 import { normalizeCountryKey } from "@shared/location-support.js";
 import {
-  matchesRequestedCity,
-  parseSearchCitiesSetting,
+  resolveSearchCities,
   shouldApplyStrictCityFilter,
 } from "@shared/search-cities.js";
-import type { CreateJobInput } from "@shared/types";
-import { toNumberOrNull, toStringOrNull } from "@shared/utils/type-conversion";
+import type { CreateJobInput } from "@shared/types/jobs";
+import {
+  toNumberOrNull,
+  toStringOrNull,
+} from "@shared/utils/type-conversion.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const HIRING_CAFE_DIR = join(__dirname, "../../../../extractors/hiringcafe");
-const DATASET_PATH = join(
-  HIRING_CAFE_DIR,
-  "storage/datasets/default/jobs.json",
-);
-const STORAGE_DATASET_DIR = join(HIRING_CAFE_DIR, "storage/datasets/default");
+const srcDir = dirname(fileURLToPath(import.meta.url));
+const EXTRACTOR_DIR = join(srcDir, "..");
+const DATASET_PATH = join(EXTRACTOR_DIR, "storage/datasets/default/jobs.json");
+const STORAGE_DATASET_DIR = join(EXTRACTOR_DIR, "storage/datasets/default");
 const JOBOPS_PROGRESS_PREFIX = "JOBOPS_PROGRESS ";
-
 const require = createRequire(import.meta.url);
 const TSX_CLI_PATH = resolveTsxCliPath();
 
@@ -76,20 +72,6 @@ export function shouldApplyStrictLocationFilter(
   return shouldApplyStrictCityFilter(location, countryKey);
 }
 
-export function matchesRequestedLocation(
-  jobLocation: string | undefined,
-  requestedLocation: string,
-): boolean {
-  return matchesRequestedCity(jobLocation, requestedLocation);
-}
-
-function resolveLocations(options: RunHiringCafeOptions): string[] {
-  const raw = options.locations?.length
-    ? options.locations
-    : parseSearchCitiesSetting(process.env.HIRING_CAFE_LOCATION_QUERY ?? "");
-  return raw.map((value) => value.trim()).filter(Boolean);
-}
-
 function resolveTsxCliPath(): string | null {
   try {
     return require.resolve("tsx/dist/cli.mjs");
@@ -105,7 +87,6 @@ function canRunNpmCommand(): boolean {
 
 function parseProgressLine(line: string): HiringCafeProgressEvent | null {
   if (!line.startsWith(JOBOPS_PROGRESS_PREFIX)) return null;
-
   const raw = line.slice(JOBOPS_PROGRESS_PREFIX.length).trim();
 
   let parsed: Record<string, unknown>;
@@ -119,10 +100,7 @@ function parseProgressLine(line: string): HiringCafeProgressEvent | null {
   const termIndex = toNumberOrNull(parsed.termIndex);
   const termTotal = toNumberOrNull(parsed.termTotal);
   const searchTerm = toStringOrNull(parsed.searchTerm) ?? "";
-
-  if (!event || termIndex === null || termTotal === null) {
-    return null;
-  }
+  if (!event || termIndex === null || termTotal === null) return null;
 
   if (event === "term_start") {
     return { type: "term_start", termIndex, termTotal, searchTerm };
@@ -131,7 +109,6 @@ function parseProgressLine(line: string): HiringCafeProgressEvent | null {
   if (event === "page_fetched") {
     const pageNo = toNumberOrNull(parsed.pageNo);
     if (pageNo === null) return null;
-
     return {
       type: "page_fetched",
       termIndex,
@@ -182,20 +159,15 @@ async function readDataset(): Promise<CreateJobInput[]> {
 
   const jobs: CreateJobInput[] = [];
   const seen = new Set<string>();
-
   for (const value of parsed) {
     if (!value || typeof value !== "object" || Array.isArray(value)) continue;
-
     const mapped = mapHiringCafeRow(value as HiringCafeRawJob);
     if (!mapped) continue;
-
     const dedupeKey = mapped.sourceJobId || mapped.jobUrl;
     if (seen.has(dedupeKey)) continue;
-
     seen.add(dedupeKey);
     jobs.push(mapped);
   }
-
   return jobs;
 }
 
@@ -218,7 +190,10 @@ export async function runHiringCafe(
     1,
     Math.floor(options.locationRadiusMiles ?? 1),
   );
-  const locations = resolveLocations(options);
+  const locations = resolveSearchCities({
+    list: options.locations,
+    env: process.env.HIRING_CAFE_LOCATION_QUERY,
+  });
   const runLocations = locations.length > 0 ? locations : [null];
   const termTotal = searchTerms.length * runLocations.length;
 
@@ -259,7 +234,7 @@ export async function runHiringCafe(
 
         const child = useNpmCommand
           ? spawn("npm", ["run", "start"], {
-              cwd: HIRING_CAFE_DIR,
+              cwd: EXTRACTOR_DIR,
               stdio: ["ignore", "pipe", "pipe"],
               env: extractorEnv,
             })
@@ -272,7 +247,7 @@ export async function runHiringCafe(
               }
 
               return spawn(process.execPath, [tsxCliPath, "src/main.ts"], {
-                cwd: HIRING_CAFE_DIR,
+                cwd: EXTRACTOR_DIR,
                 stdio: ["ignore", "pipe", "pipe"],
                 env: extractorEnv,
               });
@@ -314,11 +289,7 @@ export async function runHiringCafe(
       });
 
       const runJobs = await readDataset();
-      const filtered = strictLocationFilter
-        ? runJobs.filter((job) =>
-            matchesRequestedLocation(job.location, location),
-          )
-        : runJobs;
+      const filtered = runJobs;
 
       for (const job of filtered) {
         const key = job.sourceJobId || job.jobUrl;
@@ -331,10 +302,6 @@ export async function runHiringCafe(
     return { success: true, jobs };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    logger.warn("Hiring Cafe extractor run failed", {
-      error: message,
-      details: sanitizeUnknown(error),
-    });
     return { success: false, jobs: [], error: message };
   }
 }

@@ -4,19 +4,20 @@ import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
-import { logger } from "@infra/logger";
 import { normalizeCountryKey } from "@shared/location-support.js";
 import {
-  matchesRequestedCity,
-  parseSearchCitiesSetting,
+  resolveSearchCities,
   shouldApplyStrictCityFilter,
 } from "@shared/search-cities.js";
-import type { CreateJobInput } from "@shared/types";
-import { toNumberOrNull, toStringOrNull } from "@shared/utils/type-conversion";
+import type { CreateJobInput } from "@shared/types/jobs";
+import {
+  toNumberOrNull,
+  toStringOrNull,
+} from "@shared/utils/type-conversion.js";
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const ADZUNA_DIR = join(__dirname, "../../../../extractors/adzuna");
-const DATASET_PATH = join(ADZUNA_DIR, "storage/datasets/default/jobs.json");
+const srcDir = dirname(fileURLToPath(import.meta.url));
+const EXTRACTOR_DIR = join(srcDir, "..");
+const DATASET_PATH = join(EXTRACTOR_DIR, "storage/datasets/default/jobs.json");
 const JOBOPS_PROGRESS_PREFIX = "JOBOPS_PROGRESS ";
 const require = createRequire(import.meta.url);
 const TSX_CLI_PATH = resolveTsxCliPath();
@@ -67,20 +68,6 @@ export function shouldApplyStrictLocationFilter(
   countryKey: string,
 ): boolean {
   return shouldApplyStrictCityFilter(location, countryKey);
-}
-
-export function matchesRequestedLocation(
-  jobLocation: string | undefined,
-  requestedLocation: string,
-): boolean {
-  return matchesRequestedCity(jobLocation, requestedLocation);
-}
-
-function resolveLocations(options: RunAdzunaOptions): string[] {
-  const raw = options.locations?.length
-    ? options.locations
-    : parseSearchCitiesSetting(process.env.ADZUNA_LOCATION_QUERY ?? "");
-  return raw.map((value) => value.trim()).filter(Boolean);
 }
 
 function resolveTsxCliPath(): string | null {
@@ -205,7 +192,10 @@ export async function runAdzuna(
     options.searchTerms && options.searchTerms.length > 0
       ? options.searchTerms
       : ["web developer"];
-  const locations = resolveLocations(options);
+  const locations = resolveSearchCities({
+    list: options.locations,
+    env: process.env.ADZUNA_LOCATION_QUERY,
+  });
   const runLocations = locations.length > 0 ? locations : [null];
   const termTotal = searchTerms.length * runLocations.length;
   const useNpmCommand = canRunNpmCommand();
@@ -241,7 +231,7 @@ export async function runAdzuna(
         };
         const child = useNpmCommand
           ? spawn("npm", ["run", "start"], {
-              cwd: ADZUNA_DIR,
+              cwd: EXTRACTOR_DIR,
               stdio: ["ignore", "pipe", "pipe"],
               env: extractorEnv,
             })
@@ -253,7 +243,7 @@ export async function runAdzuna(
                 );
               }
               return spawn(process.execPath, [tsxCliPath, "src/main.ts"], {
-                cwd: ADZUNA_DIR,
+                cwd: EXTRACTOR_DIR,
                 stdio: ["ignore", "pipe", "pipe"],
                 env: extractorEnv,
               });
@@ -293,11 +283,7 @@ export async function runAdzuna(
       });
 
       const runJobs = await readDataset();
-      const filtered = strictLocationFilter
-        ? runJobs.filter((job) =>
-            matchesRequestedLocation(job.location, location),
-          )
-        : runJobs;
+      const filtered = runJobs;
 
       for (const job of filtered) {
         const key = job.sourceJobId || job.jobUrl;
@@ -310,7 +296,6 @@ export async function runAdzuna(
     return { success: true, jobs };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    logger.warn("Adzuna extractor run failed", { error: message });
     return { success: false, jobs: [], error: message };
   }
 }

@@ -3,7 +3,10 @@
  */
 
 import "./config/env";
+import { logger } from "@infra/logger";
+import { sanitizeUnknown } from "@infra/sanitize";
 import { createApp } from "./app";
+import { initializeExtractorRegistry } from "./extractors/registry";
 import * as settingsRepo from "./repositories/settings";
 import {
   getBackupSettings,
@@ -16,6 +19,25 @@ import { initialize as initializeVisaSponsors } from "./services/visa-sponsors/i
 
 async function startServer() {
   await applyStoredEnvOverrides();
+  try {
+    await initializeExtractorRegistry();
+  } catch (error) {
+    const sanitizedError = sanitizeUnknown(error);
+    logger.error("Failed to initialize extractor registry", {
+      error: sanitizedError,
+    });
+    if (process.env.NODE_ENV === "production") {
+      logger.error(
+        "Extractor registry initialization failed in production. Shutting down server.",
+      );
+      process.exit(1);
+    }
+
+    logger.error(
+      "Extractor registry initialization failed outside production. Server startup aborted.",
+    );
+    return;
+  }
 
   const app = createApp();
   const PORT = process.env.PORT || 3001;
@@ -46,7 +68,9 @@ async function startServer() {
         await initializeVisaSponsors();
       }
     } catch (error) {
-      console.warn("⚠️ Failed to initialize visa sponsors service:", error);
+      logger.warn("Failed to initialize visa sponsors service", {
+        error: sanitizeUnknown(error),
+      });
     }
 
     // Initialize backup service (load settings and start scheduler if enabled)
@@ -85,13 +109,17 @@ async function startServer() {
         );
       }
     } catch (error) {
-      console.warn("⚠️ Failed to initialize backup service:", error);
+      logger.warn("Failed to initialize backup service", {
+        error: sanitizeUnknown(error),
+      });
     }
 
     try {
       await initializeDemoModeServices();
     } catch (error) {
-      console.warn("⚠️ Failed to initialize demo mode services:", error);
+      logger.warn("Failed to initialize demo mode services", {
+        error: sanitizeUnknown(error),
+      });
     }
   });
 }

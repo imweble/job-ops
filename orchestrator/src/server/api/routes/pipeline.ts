@@ -1,12 +1,23 @@
-import { AppError, badRequest, conflict, requestTimeout } from "@infra/errors";
+import {
+  AppError,
+  badRequest,
+  conflict,
+  requestTimeout,
+  serviceUnavailable,
+} from "@infra/errors";
 import { fail, ok, okWithMeta } from "@infra/http";
 import { logger } from "@infra/logger";
 import { runWithRequestContext } from "@infra/request-context";
 import { setupSse, startSseHeartbeat, writeSseData } from "@infra/sse";
+import { PIPELINE_EXTRACTOR_SOURCE_IDS } from "@shared/extractors";
 import type { PipelineStatusResponse } from "@shared/types";
 import { type Request, type Response, Router } from "express";
 import { z } from "zod";
 import { isDemoMode } from "../../config/demo";
+import {
+  type ExtractorRegistry,
+  getExtractorRegistry,
+} from "../../extractors/registry";
 import {
   getPipelineStatus,
   requestPipelineCancel,
@@ -94,15 +105,12 @@ const runPipelineSchema = z.object({
   minSuitabilityScore: z.number().min(0).max(100).optional(),
   sources: z
     .array(
-      z.enum([
-        "gradcracker",
-        "indeed",
-        "linkedin",
-        "glassdoor",
-        "ukvisajobs",
-        "adzuna",
-        "hiringcafe",
-      ]),
+      z.enum(
+        PIPELINE_EXTRACTOR_SOURCE_IDS as [
+          (typeof PIPELINE_EXTRACTOR_SOURCE_IDS)[number],
+          ...(typeof PIPELINE_EXTRACTOR_SOURCE_IDS)[number][],
+        ],
+      ),
     )
     .min(1)
     .optional(),
@@ -111,6 +119,38 @@ const runPipelineSchema = z.object({
 pipelineRouter.post("/run", async (req: Request, res: Response) => {
   try {
     const config = runPipelineSchema.parse(req.body);
+    if (config.sources && config.sources.length > 0) {
+      let registry: ExtractorRegistry;
+      try {
+        registry = await getExtractorRegistry();
+      } catch (error) {
+        logger.error(
+          "Extractor registry unavailable during source validation",
+          {
+            route: "/api/pipeline/run",
+            error,
+          },
+        );
+        return fail(
+          res,
+          serviceUnavailable(
+            "Extractor registry is unavailable. Try again after fixing startup errors.",
+          ),
+        );
+      }
+      const unavailableSources = config.sources.filter(
+        (source) => !registry.manifestBySource.has(source),
+      );
+      if (unavailableSources.length > 0) {
+        return fail(
+          res,
+          badRequest(
+            `Requested sources are not available at runtime: ${unavailableSources.join(", ")}`,
+            { unavailableSources },
+          ),
+        );
+      }
+    }
 
     if (isDemoMode()) {
       const simulated = await simulatePipelineRun(config);
