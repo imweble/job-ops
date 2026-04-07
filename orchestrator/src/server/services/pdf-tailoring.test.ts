@@ -20,14 +20,14 @@ const { currentPdfRenderer, mocks, mockProfile, mockResumeRenderer } =
       basics: { headline: "Original Headline" },
     };
 
-    let lastPreparedResume: any = null;
+    let lastResumeJson: any = null;
     const renderer = {
       renderResumePdf: vi.fn().mockImplementation(async (args: any) => {
-        lastPreparedResume = JSON.parse(JSON.stringify(args.preparedResume));
+        lastResumeJson = JSON.parse(JSON.stringify(args.resumeJson));
       }),
-      getLastPreparedResume: () => lastPreparedResume,
-      clearLastPreparedResume: () => {
-        lastPreparedResume = null;
+      getLastResumeJson: () => lastResumeJson,
+      clearLastResumeJson: () => {
+        lastResumeJson = null;
       },
     };
 
@@ -156,6 +156,10 @@ vi.mock("./rxresume/baseResumeId", () => ({
   }),
 }));
 
+vi.mock("./design-resume", () => ({
+  getCurrentDesignResume: vi.fn().mockResolvedValue(null),
+}));
+
 vi.mock("./rxresume", async () => {
   const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
   const projectSelectionModule = await import("./projectSelection");
@@ -230,7 +234,7 @@ describe("PDF Service Tailoring Logic", () => {
     vi.clearAllMocks();
     currentPdfRenderer.value = "latex";
     mocks.readFile.mockResolvedValue(JSON.stringify(mockProfile));
-    mockResumeRenderer.clearLastPreparedResume();
+    mockResumeRenderer.clearLastResumeJson();
     mockTracerLinks.resolveTracerPublicBaseUrl.mockReturnValue(
       "https://jobops.example",
     );
@@ -253,7 +257,7 @@ describe("PDF Service Tailoring Logic", () => {
 
     // 2. Verify prepared resume content
     expect(mockResumeRenderer.renderResumePdf).toHaveBeenCalled();
-    const savedResumeJson = mockResumeRenderer.getLastPreparedResume().data;
+    const savedResumeJson = mockResumeRenderer.getLastResumeJson();
 
     const projects = savedResumeJson.sections.projects.items;
     const p1 = projects.find((p: any) => p.id === "p1");
@@ -271,7 +275,7 @@ describe("PDF Service Tailoring Logic", () => {
     await generatePdf("job-2", {}, "desc", "base.json", "p1, p2 ");
 
     expect(mockResumeRenderer.renderResumePdf).toHaveBeenCalled();
-    const savedResumeJson = mockResumeRenderer.getLastPreparedResume().data;
+    const savedResumeJson = mockResumeRenderer.getLastResumeJson();
     const projects = savedResumeJson.sections.projects.items;
 
     expect(projects.find((p: any) => p.id === "p1").visible).toBe(true);
@@ -282,7 +286,7 @@ describe("PDF Service Tailoring Logic", () => {
     await generatePdf("job-empty-projects", {}, "desc", "base.json", "");
 
     expect(mockResumeRenderer.renderResumePdf).toHaveBeenCalled();
-    const savedResumeJson = mockResumeRenderer.getLastPreparedResume().data;
+    const savedResumeJson = mockResumeRenderer.getLastResumeJson();
     const projects = savedResumeJson.sections.projects.items;
 
     expect(projects.find((p: any) => p.id === "p1").visible).toBe(false);
@@ -299,7 +303,7 @@ describe("PDF Service Tailoring Logic", () => {
     expect(projectSelection.pickProjectIdsForJob).toHaveBeenCalled();
 
     expect(mockResumeRenderer.renderResumePdf).toHaveBeenCalled();
-    const savedResumeJson = mockResumeRenderer.getLastPreparedResume().data;
+    const savedResumeJson = mockResumeRenderer.getLastResumeJson();
 
     const p1 = savedResumeJson.sections.projects.items.find(
       (p: any) => p.id === "p1",

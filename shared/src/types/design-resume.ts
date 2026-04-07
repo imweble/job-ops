@@ -53,3 +53,9 @@ export interface DesignResumeExportResponse {
   fileName: string;
   document: DesignResumeJson;
 }
+
+export interface DesignResumePdfResponse {
+  fileName: string;
+  pdfUrl: string;
+  generatedAt: string;
+}

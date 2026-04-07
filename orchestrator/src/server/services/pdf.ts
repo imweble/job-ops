@@ -6,10 +6,11 @@
 import { existsSync } from "node:fs";
 import { access, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { notFound } from "@infra/errors";
 import { logger } from "@infra/logger";
 import { getSetting } from "@server/repositories/settings";
 import { settingsRegistry } from "@shared/settings-registry";
-import type { PdfRenderer } from "@shared/types";
+import type { DesignResumePdfResponse, PdfRenderer } from "@shared/types";
 import { getDataDir } from "../config/dataDir";
 import { getCurrentDesignResume } from "./design-resume";
 import { renderResumePdf } from "./resume-renderer";
@@ -18,6 +19,7 @@ import {
   exportResumePdf as exportRxResumePdf,
   getResume as getRxResume,
   importResume as importRxResume,
+  type PreparedRxResumePdfPayload,
   prepareTailoredResumeForPdf,
 } from "./rxresume";
 import { getConfiguredRxResumeBaseResumeId } from "./rxresume/baseResumeId";
@@ -40,6 +42,21 @@ export interface GeneratePdfOptions {
   tracerLinksEnabled?: boolean;
   requestOrigin?: string | null;
   tracerCompanyName?: string | null;
+}
+
+async function ensureOutputDir(): Promise<void> {
+  if (!existsSync(OUTPUT_DIR)) {
+    await mkdir(OUTPUT_DIR, { recursive: true });
+  }
+}
+
+function sanitizePdfFileName(value: string): string {
+  const base = value
+    .trim()
+    .replace(/\.pdf$/i, "")
+    .replace(/[^a-z0-9._-]+/gi, "_")
+    .replace(/^_+|_+$/g, "");
+  return `${base || "Design_Resume"}.pdf`;
 }
 
 async function resolvePdfRenderer(): Promise<PdfRenderer> {
@@ -66,9 +83,10 @@ async function downloadRxResumePdf(
 }
 
 async function renderRxResumePdf(args: {
-  preparedResume: Awaited<ReturnType<typeof prepareTailoredResumeForPdf>>;
+  preparedResume: PreparedRxResumePdfPayload;
   outputPath: string;
   jobId: string;
+  name?: string;
 }): Promise<void> {
   const { preparedResume, outputPath, jobId } = args;
   let importedResumeId: string | null = null;
@@ -76,7 +94,7 @@ async function renderRxResumePdf(args: {
   try {
     importedResumeId = await importRxResume(
       {
-        name: `JobOps Tailored Resume ${jobId}`,
+        name: args.name?.trim() || `JobOps Tailored Resume ${jobId}`,
         data: preparedResume.data,
       },
       { mode: preparedResume.mode },
@@ -157,9 +175,7 @@ export async function generatePdf(
     logger.info("Generating PDF resume", { jobId, renderer });
 
     // Ensure output directory exists
-    if (!existsSync(OUTPUT_DIR)) {
-      await mkdir(OUTPUT_DIR, { recursive: true });
-    }
+    await ensureOutputDir();
 
     const baseResume = await loadBaseResumeSource();
 
@@ -191,7 +207,7 @@ export async function generatePdf(
     const outputPath = join(OUTPUT_DIR, `resume_${jobId}.pdf`);
     if (renderer === "latex") {
       await renderResumePdf({
-        preparedResume,
+        resumeJson: preparedResume.data,
         outputPath,
         jobId,
       });
@@ -210,6 +226,54 @@ export async function generatePdf(
     logger.error("PDF generation failed", { jobId, renderer, error });
     return { success: false, error: message };
   }
+}
+
+export async function generateDesignResumePdf(): Promise<DesignResumePdfResponse> {
+  const designResume = await getCurrentDesignResume();
+  if (!designResume?.resumeJson) {
+    throw notFound("Design Resume has not been imported yet.");
+  }
+
+  const renderer = await resolvePdfRenderer();
+  const generatedAt = new Date().toISOString();
+  const outputFileName = "design_resume_current.pdf";
+  const outputPath = join(OUTPUT_DIR, outputFileName);
+  const preparedResume: PreparedRxResumePdfPayload = {
+    mode: "v5",
+    data: structuredClone(
+      designResume.resumeJson as Record<string, unknown>,
+    ) as Record<string, unknown>,
+    projectCatalog: [],
+    selectedProjectIds: [],
+  };
+
+  await ensureOutputDir();
+
+  logger.info("Generating Design Resume PDF", {
+    renderer,
+    documentId: designResume.id,
+  });
+
+  if (renderer === "latex") {
+    await renderResumePdf({
+      resumeJson: designResume.resumeJson as Record<string, unknown>,
+      outputPath,
+      jobId: "design-resume",
+    });
+  } else {
+    await renderRxResumePdf({
+      preparedResume,
+      outputPath,
+      jobId: "design-resume",
+      name: designResume.title,
+    });
+  }
+
+  return {
+    fileName: sanitizePdfFileName(designResume.title),
+    pdfUrl: `/pdfs/${outputFileName}?v=${encodeURIComponent(generatedAt)}`,
+    generatedAt,
+  };
 }
 
 /**

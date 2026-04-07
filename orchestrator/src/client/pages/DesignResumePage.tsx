@@ -7,7 +7,7 @@ import { useDesignResume } from "@client/hooks/useDesignResume";
 import { useSettings } from "@client/hooks/useSettings";
 import type { DesignResumeDocument, PdfRenderer } from "@shared/types";
 import { useQueryClient } from "@tanstack/react-query";
-import { Download, Import, PanelLeft, PenSquare } from "lucide-react";
+import { Download, FileDown, Import, PanelLeft, PenSquare } from "lucide-react";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -43,6 +43,7 @@ export const DesignResumePage: React.FC = () => {
   } | null>(null);
   const [mobileRailOpen, setMobileRailOpen] = useState(false);
   const [pictureUploading, setPictureUploading] = useState(false);
+  const [pdfDownloading, setPdfDownloading] = useState(false);
   const [rendererUpdating, setRendererUpdating] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -150,6 +151,26 @@ export const DesignResumePage: React.FC = () => {
           ? exportError.message
           : "Failed to export Design Resume.",
       );
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    try {
+      setPdfDownloading(true);
+      const generated = await api.generateDesignResumePdf();
+      const anchor = window.document.createElement("a");
+      anchor.href = generated.pdfUrl;
+      anchor.download = generated.fileName;
+      anchor.click();
+      toast.success("Your PDF is ready.");
+    } catch (downloadError) {
+      toast.error(
+        downloadError instanceof Error
+          ? downloadError.message
+          : "Failed to generate a PDF.",
+      );
+    } finally {
+      setPdfDownloading(false);
     }
   };
 
@@ -265,7 +286,6 @@ export const DesignResumePage: React.FC = () => {
         icon={PenSquare}
         title="Design Resume"
         subtitle="Edit your resume details"
-        badge={status?.exists ? "Local" : "Not Imported"}
         actions={
           <div className="flex items-center gap-2">
             <Sheet open={mobileRailOpen} onOpenChange={setMobileRailOpen}>
@@ -289,6 +309,16 @@ export const DesignResumePage: React.FC = () => {
             <Button type="button" variant="outline" onClick={handleImport}>
               <Import className="mr-2 h-4 w-4" />
               {status?.exists ? "Re-import" : "Import"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleDownloadPdf}
+              disabled={!status?.exists || pdfDownloading}
+            >
+              <FileDown className="mr-2 h-4 w-4" />
+              {pdfDownloading ? "Preparing PDF" : "Download PDF"}
             </Button>
 
             <Button

@@ -14,6 +14,7 @@ import type {
   DesignResumeDocument,
   DesignResumeExportResponse,
   DesignResumePatchRequest,
+  DesignResumePdfResponse,
   DesignResumeStatusResponse,
   Job,
   JobActionRequest,
@@ -1378,6 +1379,12 @@ export async function deleteDesignResumePicture(): Promise<DesignResumeDocument>
 
 export async function exportDesignResume(): Promise<DesignResumeExportResponse> {
   return fetchApi<DesignResumeExportResponse>("/design-resume/export");
+}
+
+export async function generateDesignResumePdf(): Promise<DesignResumePdfResponse> {
+  return fetchApi<DesignResumePdfResponse>("/design-resume/generate-pdf", {
+    method: "POST",
+  });
 }
 
 export async function getProfileStatus(): Promise<ProfileStatusResponse> {

@@ -10,6 +10,7 @@ import {
   updateCurrentDesignResume,
   uploadDesignResumePicture,
 } from "@server/services/design-resume";
+import { generateDesignResumePdf } from "@server/services/pdf";
 import { type Request, type Response, Router } from "express";
 import { z } from "zod";
 
@@ -111,6 +112,13 @@ designResumeRouter.get(
   "/export",
   asyncRoute(async (_req: Request, res: Response) => {
     ok(res, await exportDesignResume());
+  }),
+);
+
+designResumeRouter.post(
+  "/generate-pdf",
+  asyncRoute(async (_req: Request, res: Response) => {
+    ok(res, await generateDesignResumePdf());
   }),
 );
 
