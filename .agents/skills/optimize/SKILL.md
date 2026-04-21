@@ -1,268 +1,177 @@
----
-name: optimize
-description: Improve interface performance across loading speed, rendering, animations, images, and bundle size. Makes experiences faster and smoother.
-user-invokable: true
-args:
-  - name: target
-    description: The feature or area to optimize (optional)
-    required: false
----
+# Optimize Skill
 
-Identify and fix performance issues to create faster, smoother user experiences.
+Reduces bundle size, improves runtime performance, and eliminates redundant logic in TypeScript/React codebases.
 
-## Assess Performance Issues
+## Trigger
 
-Understand current performance and identify problems:
+Use this skill when:
+- Bundle size is too large
+- Components re-render unnecessarily
+- Database queries are slow or duplicated
+- Functions run in O(n²) when O(n) is possible
+- Memory usage is excessive
 
-1. **Measure current state**:
-   - **Core Web Vitals**: LCP, FID/INP, CLS scores
-   - **Load time**: Time to interactive, first contentful paint
-   - **Bundle size**: JavaScript, CSS, image sizes
-   - **Runtime performance**: Frame rate, memory usage, CPU usage
-   - **Network**: Request count, payload sizes, waterfall
+## Process
 
-2. **Identify bottlenecks**:
-   - What's slow? (Initial load? Interactions? Animations?)
-   - What's causing it? (Large images? Expensive JavaScript? Layout thrashing?)
-   - How bad is it? (Perceivable? Annoying? Blocking?)
-   - Who's affected? (All users? Mobile only? Slow connections?)
-
-**CRITICAL**: Measure before and after. Premature optimization wastes time. Optimize what actually matters.
-
-## Optimization Strategy
-
-Create systematic improvement plan:
-
-### Loading Performance
-
-**Optimize Images**:
-- Use modern formats (WebP, AVIF)
-- Proper sizing (don't load 3000px image for 300px display)
-- Lazy loading for below-fold images
-- Responsive images (`srcset`, `picture` element)
-- Compress images (80-85% quality is usually imperceptible)
-- Use CDN for faster delivery
-
-```html
-<img 
-  src="hero.webp"
-  srcset="hero-400.webp 400w, hero-800.webp 800w, hero-1200.webp 1200w"
-  sizes="(max-width: 400px) 400px, (max-width: 800px) 800px, 1200px"
-  loading="lazy"
-  alt="Hero image"
-/>
+```
+analyze → profile → identify bottlenecks → apply fixes → verify
 ```
 
-**Reduce JavaScript Bundle**:
-- Code splitting (route-based, component-based)
-- Tree shaking (remove unused code)
-- Remove unused dependencies
-- Lazy load non-critical code
-- Use dynamic imports for large components
+### 1. Analyze
 
-```javascript
-// Lazy load heavy component
-const HeavyChart = lazy(() => import('./HeavyChart'));
-```
+Scan the target file or module for known performance anti-patterns:
 
-**Optimize CSS**:
-- Remove unused CSS
-- Critical CSS inline, rest async
-- Minimize CSS files
-- Use CSS containment for independent regions
+- Inline object/array literals in JSX props (causes re-renders)
+- Missing `useMemo` / `useCallback` for expensive computations
+- `Array.find` inside render loops
+- Unindexed database lookups
+- Importing entire libraries when only one export is needed
+- Synchronous operations that should be async
+- Duplicate API calls that could be cached
 
-**Optimize Fonts**:
-- Use `font-display: swap` or `optional`
-- Subset fonts (only characters you need)
-- Preload critical fonts
-- Use system fonts when appropriate
-- Limit font weights loaded
+### 2. Profile
 
-```css
-@font-face {
-  font-family: 'CustomFont';
-  src: url('/fonts/custom.woff2') format('woff2');
-  font-display: swap; /* Show fallback immediately */
-  unicode-range: U+0020-007F; /* Basic Latin only */
-}
-```
+Estimate the impact of each issue:
 
-**Optimize Loading Strategy**:
-- Critical resources first (async/defer non-critical)
-- Preload critical assets
-- Prefetch likely next pages
-- Service worker for offline/caching
-- HTTP/2 or HTTP/3 for multiplexing
+| Severity | Description                              |
+|----------|------------------------------------------|
+| critical | Blocks UI thread > 100ms                 |
+| high     | Causes unnecessary network round-trips   |
+| medium   | Triggers avoidable re-renders            |
+| low      | Minor memory or CPU inefficiency         |
 
-### Rendering Performance
+### 3. Identify Bottlenecks
 
-**Avoid Layout Thrashing**:
-```javascript
-// ❌ Bad: Alternating reads and writes (causes reflows)
-elements.forEach(el => {
-  const height = el.offsetHeight; // Read (forces layout)
-  el.style.height = height * 2; // Write
-});
+For each file passed to the skill, run `calcScore` to produce a numeric performance debt score.
 
-// ✅ Good: Batch reads, then batch writes
-const heights = elements.map(el => el.offsetHeight); // All reads
-elements.forEach((el, i) => {
-  el.style.height = heights[i] * 2; // All writes
-});
-```
+```typescript
+/**
+ * Calculates a performance debt score for a given source file.
+ * Higher score = more optimization needed.
+ *
+ * @param source - Raw TypeScript/TSX source code
+ * @returns A score between 0 (optimal) and 100 (critical)
+ */
+export function calcScore(source: string): number {
+  let score = 0;
 
-**Optimize Rendering**:
-- Use CSS `contain` property for independent regions
-- Minimize DOM depth (flatter is faster)
-- Reduce DOM size (fewer elements)
-- Use `content-visibility: auto` for long lists
-- Virtual scrolling for very long lists (react-window, react-virtualized)
+  const patterns: Array<{ regex: RegExp; weight: number }> = [
+    { regex: /style={{/g,                          weight: 3  }, // inline style objects
+    { regex: /onClick={\s*\(/g,                    weight: 4  }, // inline arrow in JSX
+    { regex: /\.find\(/g,                          weight: 2  }, // linear search
+    { regex: /import \* as/g,                      weight: 5  }, // namespace import
+    { regex: /JSON\.parse\(JSON\.stringify/g,       weight: 8  }, // deep clone anti-pattern
+    { regex: /useEffect\([^,]+\[\]\)/g,            weight: 2  }, // empty dep array smell
+    { regex: /console\.log/g,                      weight: 1  }, // leftover debug logs
+    { regex: /await.*await/g,                      weight: 6  }, // sequential awaits
+  ];
 
-**Reduce Paint & Composite**:
-- Use `transform` and `opacity` for animations (GPU-accelerated)
-- Avoid animating layout properties (width, height, top, left)
-- Use `will-change` sparingly for known expensive operations
-- Minimize paint areas (smaller is faster)
-
-### Animation Performance
-
-**GPU Acceleration**:
-```css
-/* ✅ GPU-accelerated (fast) */
-.animated {
-  transform: translateX(100px);
-  opacity: 0.5;
-}
-
-/* ❌ CPU-bound (slow) */
-.animated {
-  left: 100px;
-  width: 300px;
-}
-```
-
-**Smooth 60fps**:
-- Target 16ms per frame (60fps)
-- Use `requestAnimationFrame` for JS animations
-- Debounce/throttle scroll handlers
-- Use CSS animations when possible
-- Avoid long-running JavaScript during animations
-
-**Intersection Observer**:
-```javascript
-// Efficiently detect when elements enter viewport
-const observer = new IntersectionObserver((entries) => {
-  entries.forEach(entry => {
-    if (entry.isIntersecting) {
-      // Element is visible, lazy load or animate
+  for (const { regex, weight } of patterns) {
+    const matches = source.match(regex);
+    if (matches) {
+      score += matches.length * weight;
     }
-  });
-});
-```
+  }
 
-### React/Framework Optimization
-
-**React-specific**:
-- Use `memo()` for expensive components
-- `useMemo()` and `useCallback()` for expensive computations
-- Virtualize long lists
-- Code split routes
-- Avoid inline function creation in render
-- Use React DevTools Profiler
-
-**Framework-agnostic**:
-- Minimize re-renders
-- Debounce expensive operations
-- Memoize computed values
-- Lazy load routes and components
-
-### Network Optimization
-
-**Reduce Requests**:
-- Combine small files
-- Use SVG sprites for icons
-- Inline small critical assets
-- Remove unused third-party scripts
-
-**Optimize APIs**:
-- Use pagination (don't load everything)
-- GraphQL to request only needed fields
-- Response compression (gzip, brotli)
-- HTTP caching headers
-- CDN for static assets
-
-**Optimize for Slow Connections**:
-- Adaptive loading based on connection (navigator.connection)
-- Optimistic UI updates
-- Request prioritization
-- Progressive enhancement
-
-## Core Web Vitals Optimization
-
-### Largest Contentful Paint (LCP < 2.5s)
-- Optimize hero images
-- Inline critical CSS
-- Preload key resources
-- Use CDN
-- Server-side rendering
-
-### First Input Delay (FID < 100ms) / INP (< 200ms)
-- Break up long tasks
-- Defer non-critical JavaScript
-- Use web workers for heavy computation
-- Reduce JavaScript execution time
-
-### Cumulative Layout Shift (CLS < 0.1)
-- Set dimensions on images and videos
-- Don't inject content above existing content
-- Use `aspect-ratio` CSS property
-- Reserve space for ads/embeds
-- Avoid animations that cause layout shifts
-
-```css
-/* Reserve space for image */
-.image-container {
-  aspect-ratio: 16 / 9;
+  return Math.min(score, 100);
 }
 ```
 
-## Performance Monitoring
+### 4. Apply Fixes
 
-**Tools to use**:
-- Chrome DevTools (Lighthouse, Performance panel)
-- WebPageTest
-- Core Web Vitals (Chrome UX Report)
-- Bundle analyzers (webpack-bundle-analyzer)
-- Performance monitoring (Sentry, DataDog, New Relic)
+Transformations applied automatically when `isEligible` returns `true`:
 
-**Key metrics**:
-- LCP, FID/INP, CLS (Core Web Vitals)
-- Time to Interactive (TTI)
-- First Contentful Paint (FCP)
-- Total Blocking Time (TBT)
-- Bundle size
-- Request count
+```typescript
+/**
+ * Determines whether a file is a candidate for automated optimization.
+ *
+ * Files are eligible when:
+ * - They are TypeScript or TSX
+ * - calcScore returns >= 10
+ * - They are not inside node_modules or .next
+ *
+ * @param filePath - Relative path to the file
+ * @param score    - Pre-computed calcScore result
+ */
+export function isEligible(filePath: string, score: number): boolean {
+  const excluded = ["node_modules", ".next", "dist", ".agents"];
+  const isExcluded = excluded.some((dir) => filePath.includes(dir));
+  const isTS = /\.(ts|tsx)$/.test(filePath);
+  return isTS && !isExcluded && score >= 10;
+}
+```
 
-**IMPORTANT**: Measure on real devices with real network conditions. Desktop Chrome with fast connection isn't representative.
+#### Common Transformations
 
-**NEVER**:
-- Optimize without measuring (premature optimization)
-- Sacrifice accessibility for performance
-- Break functionality while optimizing
-- Use `will-change` everywhere (creates new layers, uses memory)
-- Lazy load above-fold content
-- Optimize micro-optimizations while ignoring major issues (optimize the biggest bottleneck first)
-- Forget about mobile performance (often slower devices, slower connections)
+**Memoize expensive derived values**
+```tsx
+// Before
+const sorted = items.sort((a, b) => a.date - b.date);
 
-## Verify Improvements
+// After
+const sorted = useMemo(
+  () => [...items].sort((a, b) => a.date - b.date),
+  [items]
+);
+```
 
-Test that optimizations worked:
+**Parallelize independent awaits**
+```typescript
+// Before
+const user = await fetchUser(id);
+const jobs  = await fetchJobs(id);
 
-- **Before/after metrics**: Compare Lighthouse scores
-- **Real user monitoring**: Track improvements for real users
-- **Different devices**: Test on low-end Android, not just flagship iPhone
-- **Slow connections**: Throttle to 3G, test experience
-- **No regressions**: Ensure functionality still works
-- **User perception**: Does it *feel* faster?
+// After
+const [user, jobs] = await Promise.all([fetchUser(id), fetchJobs(id)]);
+```
 
-Remember: Performance is a feature. Fast experiences feel more responsive, more polished, more professional. Optimize systematically, measure ruthlessly, and prioritize user-perceived performance.
+**Replace namespace imports with named imports**
+```typescript
+// Before
+import * as _ from "lodash";
+
+// After
+import { debounce, throttle } from "lodash";
+```
+
+### 5. Verify
+
+After applying fixes:
+
+1. Re-run `calcScore` — new score must be lower than original.
+2. Confirm TypeScript compilation passes (`tsc --noEmit`).
+3. Run existing test suite; no regressions allowed.
+4. If the fix involves React hooks, confirm hook rules are satisfied.
+
+## Output Format
+
+Return a structured report:
+
+```
+Optimize Report — src/components/JobCard.tsx
+─────────────────────────────────────────────
+Original score : 34
+Final score    : 8
+Improvements   : 4
+
+  [high]   Parallelized 2 sequential awaits in fetchJobDetails
+  [medium] Wrapped sortedApplications in useMemo (3 deps)
+  [medium] Moved onClick handler to useCallback
+  [low]    Removed 3 console.log statements
+
+Status: ✅ All checks passed
+```
+
+## Boundaries
+
+- Do **not** change public API signatures.
+- Do **not** remove comments or documentation.
+- Do **not** optimize test files — only source files.
+- Do **not** add third-party dependencies to achieve optimization.
+- Prefer readability over micro-optimizations (< 1ms gains).
+
+## Related Skills
+
+- **refactor** — structural cleanup without performance focus
+- **audit**    — security and quality checks
+- **bolder**   — design confidence improvements
